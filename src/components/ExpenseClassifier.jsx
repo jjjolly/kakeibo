@@ -33,40 +33,45 @@ const ExpenseClassifier = () => {
     try {
       const sheetData = await fetchSpreadsheetData();
 
-      // スプレッドシートのデータをアプリ形式に変換
-      const newRecords = sheetData.map((row, index) => ({
-        id: Date.now() + index,
-        date: row.date,
-        merchant: row.merchant,
-        amount: row.amount,
-        paymentMethod: row.cardType,
-        payer: null,
-        category: null,
-        needsSettlement: null,
-        settleWith: null,
-        settlementRatio: null,
-        settlementRatioType: null,
-        myRatio: null,
-        myAmount: null,
-        settlementAmountValue: null,
-        settlementStatus: null,
-        status: 'pending'
-      }));
-
-      // 既存のレコードと重複チェック（日付・店名・金額が同じものは除外）
+      // 既存のレコードと重複チェック用のキーセット
       const existingKeys = new Set(
         records.map(r => `${r.date}-${r.merchant}-${r.amount}`)
       );
 
-      const uniqueNewRecords = newRecords.filter(
-        r => !existingKeys.has(`${r.date}-${r.merchant}-${r.amount}`)
-      );
+      // 新規レコードをフィルタリング
+      const newRecordsToAdd = sheetData.filter(row => {
+        const key = `${row.date}-${row.merchant}-${row.amount}`;
+        return !existingKeys.has(key);
+      });
 
-      if (uniqueNewRecords.length === 0) {
+      if (newRecordsToAdd.length === 0) {
         alert('新しいレコードはありません');
       } else {
-        setRecords([...records, ...uniqueNewRecords]);
-        alert(`${uniqueNewRecords.length}件の新しいレコードを取り込みました`);
+        // Firestoreに新規レコードを追加
+        const recordsRef = collection(db, 'records');
+        const addPromises = newRecordsToAdd.map(row =>
+          addDoc(recordsRef, {
+            date: row.date,
+            merchant: row.merchant,
+            amount: row.amount,
+            paymentMethod: row.cardType,
+            payer: null,
+            category: null,
+            needsSettlement: null,
+            settleWith: null,
+            settlementRatio: null,
+            settlementRatioType: null,
+            myRatio: null,
+            myAmount: null,
+            settlementAmountValue: null,
+            settlementStatus: null,
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          })
+        );
+
+        await Promise.all(addPromises);
+        alert(`${newRecordsToAdd.length}件の新しいレコードを取り込みました`);
       }
     } catch (error) {
       console.error('Import error:', error);
@@ -76,46 +81,33 @@ const ExpenseClassifier = () => {
     }
   };
 
-  // 初回ロード時にデータを読み込む
+  // Firestoreからデータをリアルタイム監視
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const savedData = localStorage.getItem('expense-records');
-        if (savedData) {
-          const savedRecords = JSON.parse(savedData);
-          setRecords(savedRecords);
-        } else {
-          setRecords([
-            { id: 1, date: '2026-01-08', merchant: 'スーパーマーケット', amount: 3580, paymentMethod: 'クレジットカードA', payer: null, category: null, needsSettlement: null, settleWith: null, settlementRatio: null, settlementRatioType: null, myRatio: null, myAmount: null, settlementAmountValue: null, settlementStatus: null, status: 'pending' },
-            { id: 2, date: '2026-01-07', merchant: 'レストランA', amount: 8500, paymentMethod: 'QR決済B', payer: null, category: null, needsSettlement: null, settleWith: null, settlementRatio: null, settlementRatioType: null, myRatio: null, myAmount: null, settlementAmountValue: null, settlementStatus: null, status: 'pending' },
-            { id: 3, date: '2026-01-06', merchant: 'ガソリンスタンド', amount: 5200, paymentMethod: 'クレジットカードA', payer: null, category: null, needsSettlement: null, settleWith: null, settlementRatio: null, settlementRatioType: null, myRatio: null, myAmount: null, settlementAmountValue: null, settlementStatus: null, status: 'pending' },
-          ]);
-        }
-      } catch (error) {
-        console.error('データ読み込みエラー:', error);
-        setRecords([
-          { id: 1, date: '2026-01-08', merchant: 'スーパーマーケット', amount: 3580, paymentMethod: 'クレジットカードA', payer: null, category: null, needsSettlement: null, settleWith: null, settlementRatio: null, settlementRatioType: null, myRatio: null, myAmount: null, settlementAmountValue: null, settlementStatus: null, status: 'pending' },
-          { id: 2, date: '2026-01-07', merchant: 'レストランA', amount: 8500, paymentMethod: 'QR決済B', payer: null, category: null, needsSettlement: null, settleWith: null, settlementRatio: null, settlementRatioType: null, myRatio: null, myAmount: null, settlementAmountValue: null, settlementStatus: null, status: 'pending' },
-          { id: 3, date: '2026-01-06', merchant: 'ガソリンスタンド', amount: 5200, paymentMethod: 'クレジットカードA', payer: null, category: null, needsSettlement: null, settleWith: null, settlementRatio: null, settlementRatioType: null, myRatio: null, myAmount: null, settlementAmountValue: null, settlementStatus: null, status: 'pending' },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    const recordsRef = collection(db, 'records');
 
-    loadData();
+    // リアルタイムリスナーを設定
+    const unsubscribe = onSnapshot(recordsRef, (snapshot) => {
+      const recordsData = [];
+      snapshot.forEach((doc) => {
+        recordsData.push({
+          id: doc.id,
+          ...doc.data()
+        });
+      });
+
+      // 日付順にソート（新しい順）
+      recordsData.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      setRecords(recordsData);
+      setIsLoading(false);
+    }, (error) => {
+      console.error('Firestore監視エラー:', error);
+      setIsLoading(false);
+    });
+
+    // クリーンアップ
+    return () => unsubscribe();
   }, []);
-
-  // レコードが変更されるたびに保存
-  useEffect(() => {
-    if (!isLoading && records.length > 0) {
-      try {
-        localStorage.setItem('expense-records', JSON.stringify(records));
-      } catch (error) {
-        console.error('データ保存エラー:', error);
-      }
-    }
-  }, [records, isLoading]);
 
   const pendingRecords = records.filter(r => r.status === 'pending');
   const currentRecord = pendingRecords.length > 0 ? pendingRecords[0] : null;
@@ -245,36 +237,57 @@ const ExpenseClassifier = () => {
     return summary;
   };
 
-  const settleSelectedRecords = () => {
+  const settleSelectedRecords = async () => {
     if (selectedRecords.length === 0) {
       alert('精算するレコードを選択してください');
       return;
     }
 
-    const updatedRecords = records.map(r => {
-      if (selectedRecords.includes(r.id)) {
-        return {
-          ...r,
-          settlementStatus: 'settled'
-        };
-      }
-      return r;
-    });
-    setRecords(updatedRecords);
-    setSelectedRecords([]);
+    try {
+      // 選択したレコードを一括更新
+      const updatePromises = selectedRecords.map(recordId => {
+        const recordRef = doc(db, 'records', recordId);
+        return updateDoc(recordRef, {
+          settlementStatus: 'settled',
+          settledAt: new Date().toISOString(),
+          settledBy: currentUser?.displayName || currentUser?.email
+        });
+      });
+
+      await Promise.all(updatePromises);
+      setSelectedRecords([]);
+    } catch (error) {
+      console.error('精算エラー:', error);
+      alert('精算処理に失敗しました: ' + error.message);
+    }
   };
 
-  const settleAllWithPerson = (person) => {
-    const updatedRecords = records.map(r => {
-      if (r.settleWith === person && r.settlementStatus === 'unsettled') {
-        return {
-          ...r,
-          settlementStatus: 'settled'
-        };
+  const settleAllWithPerson = async (person) => {
+    try {
+      // 指定した人との未精算レコードを取得
+      const recordsToSettle = records.filter(
+        r => r.settleWith === person && r.settlementStatus === 'unsettled'
+      );
+
+      if (recordsToSettle.length === 0) {
+        return;
       }
-      return r;
-    });
-    setRecords(updatedRecords);
+
+      // 一括更新
+      const updatePromises = recordsToSettle.map(record => {
+        const recordRef = doc(db, 'records', record.id);
+        return updateDoc(recordRef, {
+          settlementStatus: 'settled',
+          settledAt: new Date().toISOString(),
+          settledBy: currentUser?.displayName || currentUser?.email
+        });
+      });
+
+      await Promise.all(updatePromises);
+    } catch (error) {
+      console.error('精算エラー:', error);
+      alert('精算処理に失敗しました: ' + error.message);
+    }
   };
 
   const formatMonth = (monthStr) => {
@@ -297,18 +310,19 @@ const ExpenseClassifier = () => {
     setShowEditModal(false);
   };
 
-  const saveEditedRecord = (updatedData) => {
-    const updatedRecords = records.map(r => {
-      if (r.id === editingRecord.id) {
-        return {
-          ...r,
-          ...updatedData
-        };
-      }
-      return r;
-    });
-    setRecords(updatedRecords);
-    closeEditModal();
+  const saveEditedRecord = async (updatedData) => {
+    try {
+      const recordRef = doc(db, 'records', editingRecord.id);
+      await updateDoc(recordRef, {
+        ...updatedData,
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser?.displayName || currentUser?.email
+      });
+      closeEditModal();
+    } catch (error) {
+      console.error('更新エラー:', error);
+      alert('更新に失敗しました: ' + error.message);
+    }
   };
 
   const EditModal = ({ record, onClose, onSave }) => {
@@ -726,7 +740,7 @@ const ExpenseClassifier = () => {
     );
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!payer || !category || !needsSettlement) {
       alert('入力者、カテゴリ、精算有無を選択してください');
       return;
@@ -771,34 +785,37 @@ const ExpenseClassifier = () => {
       settlementAmountValue = theirAmount;
     }
 
-    const updatedRecords = records.map(r => {
-      if (r.id === currentRecord.id) {
-        return {
-          ...r,
-          payer,
-          category,
-          needsSettlement,
-          settleWith: needsSettlement === 'yes' ? settleWith : null,
-          settlementRatio: needsSettlement === 'yes' ? finalRatio : null,
-          settlementRatioType: needsSettlement === 'yes' ? settlementRatioType : null,
-          myRatio: needsSettlement === 'yes' && settlementRatioType === 'ratio' ? myRatio : null,
-          myAmount: needsSettlement === 'yes' && settlementRatioType === 'amount' ? parseInt(myAmount) : null,
-          settlementAmountValue: needsSettlement === 'yes' ? Math.round(settlementAmountValue) : null,
-          settlementStatus: needsSettlement === 'yes' ? 'unsettled' : null,
-          status: 'closed'
-        };
-      }
-      return r;
-    });
+    try {
+      // Firestoreのドキュメントを更新
+      const recordRef = doc(db, 'records', currentRecord.id);
+      await updateDoc(recordRef, {
+        payer,
+        category,
+        needsSettlement,
+        settleWith: needsSettlement === 'yes' ? settleWith : null,
+        settlementRatio: needsSettlement === 'yes' ? finalRatio : null,
+        settlementRatioType: needsSettlement === 'yes' ? settlementRatioType : null,
+        myRatio: needsSettlement === 'yes' && settlementRatioType === 'ratio' ? myRatio : null,
+        myAmount: needsSettlement === 'yes' && settlementRatioType === 'amount' ? parseInt(myAmount) : null,
+        settlementAmountValue: needsSettlement === 'yes' ? Math.round(settlementAmountValue) : null,
+        settlementStatus: needsSettlement === 'yes' ? 'unsettled' : null,
+        status: 'closed',
+        updatedAt: new Date().toISOString(),
+        updatedBy: currentUser?.displayName || currentUser?.email
+      });
 
-    setRecords(updatedRecords);
-    setPayer('');
-    setCategory('');
-    setNeedsSettlement('');
-    setSettleWith('');
-    setSettlementRatioType('');
-    setMyRatio('');
-    setMyAmount('');
+      // フォームをリセット
+      setPayer('');
+      setCategory('');
+      setNeedsSettlement('');
+      setSettleWith('');
+      setSettlementRatioType('');
+      setMyRatio('');
+      setMyAmount('');
+    } catch (error) {
+      console.error('保存エラー:', error);
+      alert('保存に失敗しました: ' + error.message);
+    }
   };
 
   if (!currentRecord && activeTab === 'classify') {
