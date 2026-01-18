@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // recordsコレクション: 認証済みユーザーのみアクセス可能
+    match /records/{recordId} {
+      // 認証済みユーザーは読み取り可能
+      allow read: if request.auth != null;
+
+      // 認証済みユーザーは作成・更新・削除可能
+      allow create: if request.auth != null
+                    && request.resource.data.createdAt is timestamp;
+
+      allow update: if request.auth != null;
+
+      allow delete: if request.auth != null;
+    }
+  }
+}

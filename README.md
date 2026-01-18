@@ -120,17 +120,57 @@ npm run build
 
 ビルドされたファイルは `dist` ディレクトリに出力されます。
 
+## セキュリティルールの設定
+
+### Firestore セキュリティルールのデプロイ
+
+アプリを本番環境で使用する前に、Firestoreのセキュリティルールを設定する必要があります。
+
+```bash
+# Firebase CLIをインストール（未インストールの場合）
+npm install -g firebase-tools
+
+# Firebaseにログイン
+firebase login
+
+# プロジェクトを初期化
+firebase init firestore
+# 既存のfirestore.rulesファイルを使用するか聞かれたら「Yes」を選択
+
+# セキュリティルールをデプロイ
+npm run deploy:rules
+```
+
+プロジェクトに含まれている `firestore.rules` ファイルは、以下のルールを設定します：
+- 認証済みユーザーのみがデータの読み書きが可能
+- すべてのユーザーがすべてのレコードにアクセス可能（夫婦2人での共有を想定）
+
 ## デプロイ
 
 ### Firebase Hosting にデプロイ
 
 ```bash
+# Firebase CLIをインストール（未インストールの場合）
 npm install -g firebase-tools
+
+# Firebaseにログイン
 firebase login
+
+# Hostingを初期化
 firebase init hosting
-npm run build
-firebase deploy
+# 以下のように設定:
+# - Public directory: dist
+# - Configure as a single-page app: Yes
+# - Set up automatic builds and deploys with GitHub: No
+
+# ビルドとデプロイを実行
+npm run deploy
+
+# または、Hostingのみデプロイする場合
+npm run deploy:hosting
 ```
+
+デプロイ後、Firebase Consoleの「Hosting」セクションでURLを確認できます。
 
 ## トラブルシューティング
 
