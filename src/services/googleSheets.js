@@ -12,10 +12,10 @@ const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SHEETS_SPREADSHEET_ID;
 
 /**
  * スプレッドシートからデータを取得
- * @param {string} range - 取得する範囲（例: 'Sheet1!A2:D'）
+ * @param {string} range - 取得する範囲（例: 'Master!A2:D'）
  * @returns {Promise<Array>} - 変換されたレコードの配列
  */
-export const fetchSpreadsheetData = async (range = 'Sheet1!A2:D') => {
+export const fetchSpreadsheetData = async (range = 'Master!A2:D') => {
   if (!API_KEY || !SPREADSHEET_ID) {
     throw new Error('Google Sheets APIの設定が不足しています。.envファイルを確認してください。');
   }
