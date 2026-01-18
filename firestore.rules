@@ -8,8 +8,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
 
       // 認証済みユーザーは作成・更新・削除可能
-      allow create: if request.auth != null
-                    && request.resource.data.createdAt is timestamp;
+      allow create: if request.auth != null;
 
       allow update: if request.auth != null;
 
