@@ -31,7 +31,7 @@ const ExpenseClassifier = () => {
   const handleImportFromSheets = async () => {
     setIsImporting(true);
     try {
-      const sheetData = await fetchSpreadsheetData();
+      const sheetData = await fetchSpreadsheetData(currentUser.displayName);
 
       // 既存のレコードと重複チェック用のキーセット
       const existingKeys = new Set(

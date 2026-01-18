@@ -12,10 +12,11 @@ const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SHEETS_SPREADSHEET_ID;
 
 /**
  * スプレッドシートからデータを取得
- * @param {string} range - 取得する範囲（例: 'Master!A2:D'）
+ * @param {string} userName - ログインユーザー名（E列でフィルタリングに使用）
+ * @param {string} range - 取得する範囲（例: 'Master!A2:E'）
  * @returns {Promise<Array>} - 変換されたレコードの配列
  */
-export const fetchSpreadsheetData = async (range = 'Master!A2:D') => {
+export const fetchSpreadsheetData = async (userName, range = 'Master!A2:E') => {
   if (!API_KEY || !SPREADSHEET_ID) {
     throw new Error('Google Sheets APIの設定が不足しています。.envファイルを確認してください。');
   }
@@ -33,13 +34,30 @@ export const fetchSpreadsheetData = async (range = 'Master!A2:D') => {
     const data = await response.json();
     const rows = data.values || [];
 
-    // データを変換
-    const records = rows.map(row => ({
-      date: row[0] || '', // A列: 日付 (YYYY-MM-DD形式)
-      merchant: row[1] || '', // B列: 店名
-      amount: parseFloat(row[2]) || 0, // C列: 金額
-      cardType: row[3] || 'その他', // D列: 支払方法
-    }));
+    // データを変換し、E列でフィルタリング
+    const records = rows
+      .filter(row => {
+        // E列（row[4]）がログインユーザー名と一致するレコードのみ
+        const owner = row[4] || '';
+        return owner.trim() === userName;
+      })
+      .map(row => {
+        // C列の金額をパース（カンマや全角数字を除去）
+        let amountStr = (row[2] || '0').toString();
+        // カンマを除去
+        amountStr = amountStr.replace(/,/g, '');
+        // 全角数字を半角に変換
+        amountStr = amountStr.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+        const amount = parseFloat(amountStr) || 0;
+
+        return {
+          date: row[0] || '', // A列: 日付 (YYYY-MM-DD形式)
+          merchant: row[1] || '', // B列: 店名
+          amount: amount, // C列: 金額
+          cardType: row[3] || 'その他', // D列: 支払方法
+          owner: row[4] || '', // E列: 所有者（Seigo/Hanaka）
+        };
+      });
 
     return records;
   } catch (error) {
@@ -51,9 +69,11 @@ export const fetchSpreadsheetData = async (range = 'Master!A2:D') => {
 /**
  * スプレッドシートのフォーマット例:
  *
- * | A列: 日付        | B列: 店名              | C列: 金額  | D列: 支払方法          |
- * |-----------------|----------------------|----------|----------------------|
- * | 2026-01-15      | スーパーマーケット      | 3580     | クレジットカードA      |
- * | 2026-01-14      | レストランB           | 8500     | QR決済                |
- * | 2026-01-13      | ガソリンスタンド       | 5200     | クレジットカードB      |
+ * | A列: 日付        | B列: 店名              | C列: 金額  | D列: 支払方法          | E列: 所有者  |
+ * |-----------------|----------------------|----------|----------------------|-------------|
+ * | 2026-01-15      | スーパーマーケット      | 3580     | クレジットカードA      | Seigo       |
+ * | 2026-01-14      | レストランB           | 8500     | QR決済                | Hanaka      |
+ * | 2026-01-13      | ガソリンスタンド       | 5200     | クレジットカードB      | Seigo       |
+ *
+ * 注意: E列の値（Seigo/Hanaka）でログインユーザーのレコードのみがフィルタリングされます
  */
