@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Check, X, CreditCard, DollarSign, LogOut, User } from 'lucide-react';
 import { fetchSpreadsheetData } from '../services/googleSheets';
 import { db } from '../firebase';
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
 
 const ExpenseClassifier = () => {
@@ -55,6 +55,7 @@ const ExpenseClassifier = () => {
             merchant: row.merchant,
             amount: row.amount,
             paymentMethod: row.cardType,
+            owner: row.owner, // 所有者情報を追加
             payer: null,
             category: null,
             needsSettlement: null,
@@ -83,10 +84,14 @@ const ExpenseClassifier = () => {
 
   // Firestoreからデータをリアルタイム監視
   useEffect(() => {
+    if (!currentUser) return;
+
     const recordsRef = collection(db, 'records');
+    // ログインユーザーのレコードのみを取得
+    const q = query(recordsRef, where('owner', '==', currentUser.displayName));
 
     // リアルタイムリスナーを設定
-    const unsubscribe = onSnapshot(recordsRef, (snapshot) => {
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const recordsData = [];
       snapshot.forEach((doc) => {
         recordsData.push({
@@ -107,7 +112,7 @@ const ExpenseClassifier = () => {
 
     // クリーンアップ
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   const pendingRecords = records.filter(r => r.status === 'pending');
   const currentRecord = pendingRecords.length > 0 ? pendingRecords[0] : null;
