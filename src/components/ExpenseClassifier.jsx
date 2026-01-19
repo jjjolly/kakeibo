@@ -373,7 +373,6 @@ const ExpenseClassifier = () => {
   };
 
   const EditModal = ({ record, onClose, onSave }) => {
-    const [editPayer, setEditPayer] = useState(record.payer);
     const [editCategory, setEditCategory] = useState(record.category);
     const [editNeedsSettlement, setEditNeedsSettlement] = useState(record.needsSettlement);
     const [editSettleWith, setEditSettleWith] = useState(record.settleWith);
@@ -411,7 +410,7 @@ const ExpenseClassifier = () => {
       }
 
       onSave({
-        payer: editPayer,
+        payer: currentUser?.displayName,
         category: editCategory,
         needsSettlement: editNeedsSettlement,
         settleWith: editNeedsSettlement === 'yes' ? editSettleWith : null,
@@ -452,41 +451,28 @@ const ExpenseClassifier = () => {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-3">入力者</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {settlementPeople.map(person => (
-                    <button
-                      key={person}
-                      type="button"
-                      onClick={() => setEditPayer(person)}
-                      className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                        editPayer === person
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      {person}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-3">カテゴリ</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setEditCategory(cat)}
-                      className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                        editCategory === cat
-                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-semibold'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      {cat}
-                    </button>
+                <div className="space-y-4">
+                  {Object.entries(categories).map(([groupName, items]) => (
+                    <div key={groupName}>
+                      <div className="text-sm font-semibold text-gray-600 mb-2">{groupName}</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {items.map(cat => (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => setEditCategory(cat)}
+                            className={`py-2 px-3 rounded-lg border-2 transition-all text-sm ${
+                              editCategory === cat
+                                ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-semibold'
+                                : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -524,20 +510,28 @@ const ExpenseClassifier = () => {
                   <div className="mb-6">
                     <label className="block text-sm font-semibold text-gray-700 mb-3">精算相手</label>
                     <div className="grid grid-cols-2 gap-2">
-                      {settlementPeople.filter(p => p !== editPayer).map(person => (
-                        <button
-                          key={person}
-                          type="button"
-                          onClick={() => setEditSettleWith(person)}
-                          className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                            editSettleWith === person
-                              ? 'border-purple-500 bg-purple-50 text-purple-700 font-semibold'
-                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      <button
+                        type="button"
+                        onClick={() => setEditSettleWith(getOtherUser())}
+                        className={`py-3 px-4 rounded-lg border-2 transition-all ${
+                          editSettleWith === getOtherUser()
+                            ? 'border-purple-500 bg-purple-50 text-purple-700 font-semibold'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}
-                        >
-                          {person}
-                        </button>
-                      ))}
+                      >
+                        {getOtherUser()}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditSettleWith('Other')}
+                        className={`py-3 px-4 rounded-lg border-2 transition-all ${
+                          editSettleWith === 'Other'
+                            ? 'border-purple-500 bg-purple-50 text-purple-700 font-semibold'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        Other
+                      </button>
                     </div>
                   </div>
 
