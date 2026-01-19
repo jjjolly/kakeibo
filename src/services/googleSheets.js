@@ -9,6 +9,7 @@
 
 const API_KEY = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY;
 const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SHEETS_SPREADSHEET_ID;
+const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SHEETS_SCRIPT_URL;
 
 /**
  * スプレッドシートからデータを取得
@@ -62,6 +63,66 @@ export const fetchSpreadsheetData = async (userName, range = 'Master!A2:E') => {
     return records;
   } catch (error) {
     console.error('Google Sheets fetch error:', error);
+    throw error;
+  }
+};
+
+/**
+ * Google Sheetsにレコードの処理完了を書き戻す
+ * @param {Object} record - 処理完了したレコード
+ * @returns {Promise<Object>} - 結果オブジェクト
+ */
+export const updateRecordToSheet = async (record) => {
+  if (!SCRIPT_URL) {
+    throw new Error('Google Apps Script URLが設定されていません。.envファイルを確認してください。');
+  }
+
+  try {
+    // 精算方法の文字列を作成
+    let settlementMethod = '';
+    let settlementDetail = '';
+
+    if (record.settlementRatioType === 'full') {
+      settlementMethod = `${record.payer}が全額立替`;
+    } else if (record.settlementRatioType === 'half') {
+      settlementMethod = '折半';
+    } else if (record.settlementRatioType === 'ratio') {
+      settlementMethod = '比率';
+      settlementDetail = `自分:${record.myRatio || 0}割`;
+    } else if (record.settlementRatioType === 'amount') {
+      settlementMethod = '金額指定';
+      settlementDetail = `自分:${record.myAmount || 0}円`;
+    }
+
+    const payload = {
+      action: 'update',
+      record: {
+        date: record.date,
+        merchant: record.merchant,
+        amount: record.amount,
+        owner: record.owner,
+        category: record.category || '',
+        needsSettlement: record.needsSettlement || '',
+        settleWith: record.settleWith || '',
+        settlementMethod: settlementMethod,
+        settlementDetail: settlementDetail
+      }
+    };
+
+    const response = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      mode: 'no-cors' // Google Apps Scriptの制限により必要
+    });
+
+    // no-corsモードでは詳細なレスポンスが取得できないため、
+    // エラーがなければ成功とみなす
+    return { success: true };
+  } catch (error) {
+    console.error('Google Sheets update error:', error);
     throw error;
   }
 };

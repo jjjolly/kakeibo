@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Check, X, CreditCard, DollarSign, LogOut, User } from 'lucide-react';
-import { fetchSpreadsheetData } from '../services/googleSheets';
+import { fetchSpreadsheetData, updateRecordToSheet } from '../services/googleSheets';
 import { db } from '../firebase';
 import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
@@ -808,6 +808,24 @@ const ExpenseClassifier = () => {
         updatedAt: new Date().toISOString(),
         updatedBy: currentUser?.displayName || currentUser?.email
       });
+
+      // Google Sheetsに書き戻し
+      try {
+        await updateRecordToSheet({
+          ...currentRecord,
+          payer,
+          category,
+          needsSettlement: needsSettlement === 'yes' ? 'あり' : 'なし',
+          settleWith: needsSettlement === 'yes' ? settleWith : '',
+          settlementRatioType: needsSettlement === 'yes' ? settlementRatioType : '',
+          myRatio: needsSettlement === 'yes' && settlementRatioType === 'ratio' ? myRatio : '',
+          myAmount: needsSettlement === 'yes' && settlementRatioType === 'amount' ? parseInt(myAmount) : ''
+        });
+        console.log('Google Sheetsへの書き戻し成功');
+      } catch (sheetError) {
+        console.error('Google Sheets書き戻しエラー:', sheetError);
+        // Google Sheetsの書き戻しに失敗してもFirestoreの保存は成功しているので、エラーは無視
+      }
 
       // フォームをリセット
       setPayer('');
