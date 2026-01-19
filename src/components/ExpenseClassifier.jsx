@@ -241,6 +241,44 @@ const ExpenseClassifier = () => {
 
   const months = Object.keys(recordsByMonth).sort().reverse();
 
+  // 月別集計を計算
+  const calculateMonthlyStats = (month) => {
+    const monthRecords = recordsByMonth[month] || [];
+
+    // カテゴリ別集計
+    const categoryTotals = {};
+    let totalAmount = 0;
+    let fixedCostTotal = 0; // 固定費合計
+    let variableCostTotal = 0; // 変動費合計
+
+    monthRecords.forEach(record => {
+      const amount = record.amount || 0;
+      totalAmount += amount;
+
+      if (record.category) {
+        if (!categoryTotals[record.category]) {
+          categoryTotals[record.category] = 0;
+        }
+        categoryTotals[record.category] += amount;
+
+        // 固定費・変動費の判定
+        if (categories['固定費'].includes(record.category)) {
+          fixedCostTotal += amount;
+        } else if (categories['変動費'].includes(record.category)) {
+          variableCostTotal += amount;
+        }
+      }
+    });
+
+    return {
+      totalAmount,
+      fixedCostTotal,
+      variableCostTotal,
+      categoryTotals,
+      recordCount: monthRecords.length
+    };
+  };
+
   const getSettlementAmount = (record) => {
     if (!record.settlementRatioType) return 0;
 
@@ -1028,6 +1066,14 @@ const ExpenseClassifier = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setActiveTab('analytics')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600"
+              >
+                <div className="text-sm">統計</div>
+                <div className="text-xs mt-1">月別集計</div>
+              </button>
+              <button
+                type="button"
                 onClick={() => setActiveTab('history')}
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600"
               >
@@ -1085,6 +1131,14 @@ const ExpenseClassifier = () => {
               >
                 <div className="text-sm">精算管理</div>
                 <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('analytics')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              >
+                <div className="text-sm">統計</div>
+                <div className="text-xs mt-1">月別集計</div>
               </button>
               <button
                 type="button"
@@ -1301,6 +1355,170 @@ const ExpenseClassifier = () => {
     );
   }
 
+  if (activeTab === 'analytics') {
+    const stats = selectedMonth && months.includes(selectedMonth)
+      ? calculateMonthlyStats(selectedMonth)
+      : null;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className="max-w-4xl mx-auto pt-8">
+          <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-3xl font-bold text-gray-800">統計</h1>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg">
+                  <User className="w-4 h-4 text-indigo-600" />
+                  <span className="text-sm font-semibold text-indigo-700">
+                    {currentUser?.displayName || currentUser?.email}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="ログアウト"
+                >
+                  <LogOut className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('classify')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              >
+                <div className="text-sm">分類</div>
+                <div className="text-xs mt-1">未処理: {pendingRecords.length}件</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('settlement')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              >
+                <div className="text-sm">精算管理</div>
+                <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('analytics')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white"
+              >
+                <div className="text-sm">統計</div>
+                <div className="text-xs mt-1">月別集計</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              >
+                <div className="text-sm">履歴</div>
+                <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+              </button>
+            </div>
+          </div>
+
+          {months.length === 0 ? (
+            <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+              <p className="text-gray-500">処理済みのレコードはまだありません</p>
+            </div>
+          ) : (
+            <>
+              {/* 月選択 */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                <h2 className="text-lg font-bold text-gray-800 mb-4">月を選択</h2>
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {months.map(month => (
+                    <button
+                      key={month}
+                      type="button"
+                      onClick={() => setSelectedMonth(month)}
+                      className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                        selectedMonth === month
+                          ? 'bg-indigo-600 text-white font-semibold'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {formatMonth(month)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 月別集計 */}
+              {stats && (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    {/* 合計支出 */}
+                    <div className="bg-white rounded-2xl shadow-xl p-6">
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2">合計支出</h3>
+                      <p className="text-3xl font-bold text-gray-800">¥{stats.totalAmount.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500 mt-1">{stats.recordCount}件</p>
+                    </div>
+
+                    {/* 固定費 */}
+                    <div className="bg-white rounded-2xl shadow-xl p-6">
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2">固定費</h3>
+                      <p className="text-3xl font-bold text-blue-600">¥{stats.fixedCostTotal.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {stats.totalAmount > 0 ? Math.round((stats.fixedCostTotal / stats.totalAmount) * 100) : 0}%
+                      </p>
+                    </div>
+
+                    {/* 変動費 */}
+                    <div className="bg-white rounded-2xl shadow-xl p-6">
+                      <h3 className="text-sm font-semibold text-gray-600 mb-2">変動費</h3>
+                      <p className="text-3xl font-bold text-green-600">¥{stats.variableCostTotal.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {stats.totalAmount > 0 ? Math.round((stats.variableCostTotal / stats.totalAmount) * 100) : 0}%
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* カテゴリ別集計 */}
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">カテゴリ別支出</h3>
+                    <div className="space-y-3">
+                      {Object.entries(stats.categoryTotals)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([category, amount]) => {
+                          const percentage = stats.totalAmount > 0
+                            ? Math.round((amount / stats.totalAmount) * 100)
+                            : 0;
+                          const isFixed = categories['固定費'].includes(category);
+
+                          return (
+                            <div key={category} className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className={`text-sm font-semibold ${isFixed ? 'text-blue-700' : 'text-green-700'}`}>
+                                    {category}
+                                  </span>
+                                  <span className="text-sm font-bold text-gray-700">
+                                    ¥{amount.toLocaleString()} ({percentage}%)
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                  <div
+                                    className={`h-2 rounded-full ${isFixed ? 'bg-blue-500' : 'bg-green-500'}`}
+                                    style={{ width: `${percentage}%` }}
+                                  ></div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (activeTab === 'history') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -1340,6 +1558,14 @@ const ExpenseClassifier = () => {
               >
                 <div className="text-sm">精算管理</div>
                 <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('analytics')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              >
+                <div className="text-sm">統計</div>
+                <div className="text-xs mt-1">月別集計</div>
               </button>
               <button
                 type="button"
@@ -1489,6 +1715,14 @@ const ExpenseClassifier = () => {
             >
               <div className="text-sm">精算管理</div>
               <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('analytics')}
+              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+            >
+              <div className="text-sm">統計</div>
+              <div className="text-xs mt-1">月別集計</div>
             </button>
             <button
               type="button"
