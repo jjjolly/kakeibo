@@ -115,7 +115,8 @@ export const updateRecordToSheet = async (record) => {
         needsSettlement: record.needsSettlement || '',
         settleWith: record.settleWith || '',
         settlementMethod: settlementMethod,
-        settlementDetail: settlementDetail
+        settlementDetail: settlementDetail,
+        settlementCompletedDate: record.settlementCompletedDate || '' // N列: 精算完了日
       }
     };
 

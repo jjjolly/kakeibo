@@ -291,17 +291,34 @@ const ExpenseClassifier = () => {
     }
 
     try {
+      const settledDate = new Date();
+      const settlementCompletedDate = settledDate.toISOString().split('T')[0]; // YYYY-MM-DD形式
+
+      // 選択したレコードを取得
+      const recordsToSettle = records.filter(r => selectedRecords.includes(r.id));
+
       // 選択したレコードを一括更新
       const updatePromises = selectedRecords.map(recordId => {
         const recordRef = doc(db, 'records', recordId);
         return updateDoc(recordRef, {
           settlementStatus: 'settled',
-          settledAt: new Date().toISOString(),
+          settledAt: settledDate.toISOString(),
           settledBy: currentUser?.displayName || currentUser?.email
         });
       });
 
       await Promise.all(updatePromises);
+
+      // Google Sheetsに精算完了日を書き戻す
+      const sheetUpdatePromises = recordsToSettle.map(record => {
+        return updateRecordToSheet({
+          ...record,
+          settlementCompletedDate: settlementCompletedDate
+        });
+      });
+
+      await Promise.all(sheetUpdatePromises);
+
       setSelectedRecords([]);
     } catch (error) {
       console.error('精算エラー:', error);
@@ -311,6 +328,9 @@ const ExpenseClassifier = () => {
 
   const settleAllWithPerson = async (person) => {
     try {
+      const settledDate = new Date();
+      const settlementCompletedDate = settledDate.toISOString().split('T')[0]; // YYYY-MM-DD形式
+
       // 指定した人との未精算レコードを取得
       const recordsToSettle = records.filter(
         r => r.settleWith === person && r.settlementStatus === 'unsettled'
@@ -325,12 +345,22 @@ const ExpenseClassifier = () => {
         const recordRef = doc(db, 'records', record.id);
         return updateDoc(recordRef, {
           settlementStatus: 'settled',
-          settledAt: new Date().toISOString(),
+          settledAt: settledDate.toISOString(),
           settledBy: currentUser?.displayName || currentUser?.email
         });
       });
 
       await Promise.all(updatePromises);
+
+      // Google Sheetsに精算完了日を書き戻す
+      const sheetUpdatePromises = recordsToSettle.map(record => {
+        return updateRecordToSheet({
+          ...record,
+          settlementCompletedDate: settlementCompletedDate
+        });
+      });
+
+      await Promise.all(sheetUpdatePromises);
     } catch (error) {
       console.error('精算エラー:', error);
       alert('精算処理に失敗しました: ' + error.message);
