@@ -1066,19 +1066,19 @@ const ExpenseClassifier = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('analytics')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600"
-              >
-                <div className="text-sm">統計</div>
-                <div className="text-xs mt-1">月別集計</div>
-              </button>
-              <button
-                type="button"
                 onClick={() => setActiveTab('history')}
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600"
               >
                 <div className="text-sm">履歴</div>
                 <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('analytics')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600"
+              >
+                <div className="text-sm">統計</div>
+                <div className="text-xs mt-1">月別集計</div>
               </button>
             </div>
           </div>
@@ -1134,19 +1134,19 @@ const ExpenseClassifier = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('analytics')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
-              >
-                <div className="text-sm">統計</div>
-                <div className="text-xs mt-1">月別集計</div>
-              </button>
-              <button
-                type="button"
                 onClick={() => setActiveTab('history')}
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
               >
                 <div className="text-sm">履歴</div>
                 <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('analytics')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              >
+                <div className="text-sm">統計</div>
+                <div className="text-xs mt-1">月別集計</div>
               </button>
             </div>
           </div>
@@ -1362,7 +1362,7 @@ const ExpenseClassifier = () => {
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <div className="max-w-4xl mx-auto pt-8">
+        <div className="max-w-2xl mx-auto pt-8">
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold text-gray-800">統計</h1>
@@ -1401,19 +1401,19 @@ const ExpenseClassifier = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('analytics')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white"
-              >
-                <div className="text-sm">統計</div>
-                <div className="text-xs mt-1">月別集計</div>
-              </button>
-              <button
-                type="button"
                 onClick={() => setActiveTab('history')}
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
               >
                 <div className="text-sm">履歴</div>
                 <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('analytics')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white"
+              >
+                <div className="text-sm">統計</div>
+                <div className="text-xs mt-1">月別集計</div>
               </button>
             </div>
           </div>
@@ -1561,19 +1561,19 @@ const ExpenseClassifier = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab('analytics')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
-              >
-                <div className="text-sm">統計</div>
-                <div className="text-xs mt-1">月別集計</div>
-              </button>
-              <button
-                type="button"
                 onClick={() => setActiveTab('history')}
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white"
               >
                 <div className="text-sm">履歴</div>
                 <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('analytics')}
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              >
+                <div className="text-sm">統計</div>
+                <div className="text-xs mt-1">月別集計</div>
               </button>
             </div>
           </div>
@@ -1718,19 +1718,19 @@ const ExpenseClassifier = () => {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('analytics')}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
-            >
-              <div className="text-sm">統計</div>
-              <div className="text-xs mt-1">月別集計</div>
-            </button>
-            <button
-              type="button"
               onClick={() => setActiveTab('history')}
               className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
             >
               <div className="text-sm">履歴</div>
               <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('analytics')}
+              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+            >
+              <div className="text-sm">統計</div>
+              <div className="text-xs mt-1">月別集計</div>
             </button>
           </div>
         </div>
