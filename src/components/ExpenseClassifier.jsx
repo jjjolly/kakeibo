@@ -35,9 +35,65 @@ const ExpenseClassifier = () => {
     }
   }, [needsSettlement]);
 
+  // 現在のレコードが変わったときにフォームをリセット
+  useEffect(() => {
+    const pendingRecords = records.filter(r => r.status === 'pending');
+    const currentRecord = pendingRecords.length > 0 ? pendingRecords[0] : null;
+
+    if (currentRecord) {
+      // レコードに推定カテゴリが設定されていればフォームに反映
+      setCategory(currentRecord.category || '');
+      setNeedsSettlement(currentRecord.needsSettlement || '');
+      setSettleWith(currentRecord.settleWith || '');
+      setSettlementRatioType(currentRecord.settlementRatioType || '');
+      setMyRatio(currentRecord.myRatio?.toString() || '');
+      setMyAmount(currentRecord.myAmount?.toString() || '');
+    } else {
+      // レコードがない場合はフォームをクリア
+      setCategory('');
+      setNeedsSettlement('');
+      setSettleWith('');
+      setSettlementRatioType('');
+      setMyRatio('');
+      setMyAmount('');
+    }
+  }, [records]);
+
   const categories = {
     '固定費': ['住宅費', '水道光熱費', '通信料', '交通費', 'サブスク費', 'その他'],
     '変動費': ['食費', '日用品費', '医療費', '被服費', '美容費', '交際費', '娯楽費', '雑費', '特別費', 'ジャック養育費']
+  };
+
+  // 店名から過去の最頻カテゴリを推定
+  const suggestCategoryFromHistory = (merchantName) => {
+    // 同じ店名の過去の処理済みレコードを取得
+    const similarRecords = records.filter(r =>
+      r.merchant === merchantName &&
+      r.status === 'closed' &&
+      r.category
+    );
+
+    if (similarRecords.length === 0) {
+      return null; // 過去データなし
+    }
+
+    // カテゴリの出現回数をカウント
+    const categoryCount = {};
+    similarRecords.forEach(r => {
+      categoryCount[r.category] = (categoryCount[r.category] || 0) + 1;
+    });
+
+    // 最頻カテゴリを取得
+    let mostFrequentCategory = null;
+    let maxCount = 0;
+    Object.entries(categoryCount).forEach(([cat, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        mostFrequentCategory = cat;
+      }
+    });
+
+    return mostFrequentCategory;
   };
 
   // Google Sheetsからデータをインポート
@@ -89,6 +145,9 @@ const ExpenseClassifier = () => {
             });
           } else {
             // 未処理レコード：通常の新規取り込み
+            // 過去の類似レコードからカテゴリを推定
+            const suggestedCategory = suggestCategoryFromHistory(row.merchant);
+
             return addDoc(recordsRef, {
               date: row.date,
               merchant: row.merchant,
@@ -96,7 +155,7 @@ const ExpenseClassifier = () => {
               paymentMethod: row.cardType,
               owner: row.owner,
               payer: null,
-              category: null,
+              category: suggestedCategory, // 推定カテゴリを設定
               needsSettlement: null,
               settleWith: null,
               settlementRatio: null,
