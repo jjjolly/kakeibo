@@ -14,10 +14,10 @@ const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SHEETS_SCRIPT_URL;
 /**
  * スプレッドシートからデータを取得
  * @param {string} userName - ログインユーザー名（E列でフィルタリングに使用）
- * @param {string} range - 取得する範囲（例: 'Master!A2:E'）
+ * @param {string} range - 取得する範囲（例: 'Master!A2:M'）
  * @returns {Promise<Array>} - 変換されたレコードの配列
  */
-export const fetchSpreadsheetData = async (userName, range = 'Master!A2:E') => {
+export const fetchSpreadsheetData = async (userName, range = 'Master!A2:M') => {
   if (!API_KEY || !SPREADSHEET_ID) {
     throw new Error('Google Sheets APIの設定が不足しています。.envファイルを確認してください。');
   }
@@ -51,12 +51,22 @@ export const fetchSpreadsheetData = async (userName, range = 'Master!A2:E') => {
         amountStr = amountStr.replace(/[０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
         const amount = parseFloat(amountStr) || 0;
 
+        // G列（処理状態）を確認
+        const processStatus = (row[6] || '').toString().trim();
+        const isProcessed = processStatus === '処理済み';
+
         return {
           date: row[0] || '', // A列: 日付 (YYYY-MM-DD形式)
           merchant: row[1] || '', // B列: 店名
           amount: amount, // C列: 金額
           cardType: row[3] || 'その他', // D列: 支払方法
           owner: row[4] || '', // E列: 所有者（Seigo/Hanaka）
+          isProcessed: isProcessed, // G列が「処理済み」かどうか
+          category: row[7] || '', // H列: カテゴリ
+          needsSettlement: row[8] || '', // I列: 精算有無
+          settleWith: row[9] || '', // J列: 精算相手
+          settlementMethod: row[10] || '', // K列: 精算方法
+          settlementDetail: row[11] || '', // L列: 精算方法詳細
         };
       });
 

@@ -10,14 +10,12 @@ const ExpenseClassifier = () => {
   const [records, setRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const [payer, setPayer] = useState('');
   const [category, setCategory] = useState('');
   const [needsSettlement, setNeedsSettlement] = useState('');
   const [settleWith, setSettleWith] = useState('');
   const [settlementRatioType, setSettlementRatioType] = useState('');
   const [myRatio, setMyRatio] = useState('');
   const [myAmount, setMyAmount] = useState('');
-  const [settlementPeople] = useState(['Seigo', 'Hanaka']);
   const [selectedMonth, setSelectedMonth] = useState('2026-01');
   const [activeTab, setActiveTab] = useState('classify');
   const [editingRecord, setEditingRecord] = useState(null);
@@ -25,7 +23,22 @@ const ExpenseClassifier = () => {
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [isImporting, setIsImporting] = useState(false);
 
-  const categories = ['食費', '交通費', '光熱費', '通信費', '娯楽', '医療', '日用品', 'その他'];
+  // 相手のユーザー名を取得
+  const getOtherUser = () => {
+    return currentUser?.displayName === 'Seigo' ? 'Hanaka' : 'Seigo';
+  };
+
+  // 精算有無が変更されたときに精算相手をデフォルト設定
+  useEffect(() => {
+    if (needsSettlement === 'yes' && !settleWith) {
+      setSettleWith(getOtherUser());
+    }
+  }, [needsSettlement]);
+
+  const categories = {
+    '固定費': ['住宅費', '水道光熱費', '通信料', '交通費', 'サブスク費', 'その他'],
+    '変動費': ['食費', '日用品費', '医療費', '被服費', '美容費', '交際費', '娯楽費', '雑費', '特別費', 'ジャック養育費']
+  };
 
   // Google Sheetsからデータをインポート
   const handleImportFromSheets = async () => {
@@ -49,30 +62,59 @@ const ExpenseClassifier = () => {
       } else {
         // Firestoreに新規レコードを追加
         const recordsRef = collection(db, 'records');
-        const addPromises = newRecordsToAdd.map(row =>
-          addDoc(recordsRef, {
-            date: row.date,
-            merchant: row.merchant,
-            amount: row.amount,
-            paymentMethod: row.cardType,
-            owner: row.owner, // 所有者情報を追加
-            payer: null,
-            category: null,
-            needsSettlement: null,
-            settleWith: null,
-            settlementRatio: null,
-            settlementRatioType: null,
-            myRatio: null,
-            myAmount: null,
-            settlementAmountValue: null,
-            settlementStatus: null,
-            status: 'pending',
-            createdAt: new Date().toISOString()
-          })
-        );
+        const addPromises = newRecordsToAdd.map(row => {
+          // 処理済みレコードかどうかで保存内容を分ける
+          if (row.isProcessed) {
+            // 処理済みレコード：Google Sheetsの情報をそのまま使用
+            return addDoc(recordsRef, {
+              date: row.date,
+              merchant: row.merchant,
+              amount: row.amount,
+              paymentMethod: row.cardType,
+              owner: row.owner,
+              payer: row.owner, // 入力者=所有者
+              category: row.category || null,
+              needsSettlement: row.needsSettlement === 'あり' ? 'yes' : 'no',
+              settleWith: row.settleWith || null,
+              settlementRatio: row.settlementMethod || null,
+              settlementRatioType: null, // 過去データのため詳細不明
+              myRatio: null,
+              myAmount: null,
+              settlementAmountValue: null,
+              settlementStatus: row.needsSettlement === 'あり' ? 'unsettled' : null,
+              status: 'closed', // 処理済み
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              updatedBy: row.owner
+            });
+          } else {
+            // 未処理レコード：通常の新規取り込み
+            return addDoc(recordsRef, {
+              date: row.date,
+              merchant: row.merchant,
+              amount: row.amount,
+              paymentMethod: row.cardType,
+              owner: row.owner,
+              payer: null,
+              category: null,
+              needsSettlement: null,
+              settleWith: null,
+              settlementRatio: null,
+              settlementRatioType: null,
+              myRatio: null,
+              myAmount: null,
+              settlementAmountValue: null,
+              settlementStatus: null,
+              status: 'pending',
+              createdAt: new Date().toISOString()
+            });
+          }
+        });
 
         await Promise.all(addPromises);
-        alert(`${newRecordsToAdd.length}件の新しいレコードを取り込みました`);
+        const processedCount = newRecordsToAdd.filter(r => r.isProcessed).length;
+        const pendingCount = newRecordsToAdd.filter(r => !r.isProcessed).length;
+        alert(`${newRecordsToAdd.length}件の新しいレコードを取り込みました\n（処理済み: ${processedCount}件、未処理: ${pendingCount}件）`);
       }
     } catch (error) {
       console.error('Import error:', error);
@@ -746,8 +788,8 @@ const ExpenseClassifier = () => {
   };
 
   const handleSave = async () => {
-    if (!payer || !category || !needsSettlement) {
-      alert('入力者、カテゴリ、精算有無を選択してください');
+    if (!category || !needsSettlement) {
+      alert('カテゴリ、精算有無を選択してください');
       return;
     }
 
@@ -770,6 +812,8 @@ const ExpenseClassifier = () => {
       alert('金額を入力してください');
       return;
     }
+
+    const payer = currentUser?.displayName; // 入力者はログインユーザー
 
     let finalRatio = '';
     let settlementAmountValue = 0;
@@ -828,7 +872,6 @@ const ExpenseClassifier = () => {
       }
 
       // フォームをリセット
-      setPayer('');
       setCategory('');
       setNeedsSettlement('');
       setSettleWith('');
@@ -1388,44 +1431,29 @@ const ExpenseClassifier = () => {
 
           <div className="mb-6">
             <label className="block text-sm font-semibold text-gray-700 mb-3">
-              入力者 <span className="text-red-500">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {settlementPeople.map(person => (
-                <button
-                  key={person}
-                  type="button"
-                  onClick={() => setPayer(person)}
-                  className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                    payer === person
-                      ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  {person}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
               カテゴリ <span className="text-red-500">*</span>
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategory(cat)}
-                  className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                    category === cat
-                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-semibold'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                  }`}
-                >
-                  {cat}
-                </button>
+            <div className="space-y-4">
+              {Object.entries(categories).map(([groupName, items]) => (
+                <div key={groupName}>
+                  <div className="text-sm font-semibold text-gray-600 mb-2">{groupName}</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {items.map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setCategory(cat)}
+                        className={`py-2 px-3 rounded-lg border-2 transition-all text-sm ${
+                          category === cat
+                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-semibold'
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -1473,20 +1501,28 @@ const ExpenseClassifier = () => {
                   精算相手 <span className="text-red-500">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {settlementPeople.filter(p => p !== payer).map(person => (
-                    <button
-                      key={person}
-                      type="button"
-                      onClick={() => setSettleWith(person)}
-                      className={`py-3 px-4 rounded-lg border-2 transition-all ${
-                        settleWith === person
-                          ? 'border-purple-500 bg-purple-50 text-purple-700 font-semibold'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      {person}
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSettleWith(getOtherUser())}
+                    className={`py-3 px-4 rounded-lg border-2 transition-all ${
+                      settleWith === getOtherUser()
+                        ? 'border-purple-500 bg-purple-50 text-purple-700 font-semibold'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    {getOtherUser()}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSettleWith('Other')}
+                    className={`py-3 px-4 rounded-lg border-2 transition-all ${
+                      settleWith === 'Other'
+                        ? 'border-purple-500 bg-purple-50 text-purple-700 font-semibold'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    Other
+                  </button>
                 </div>
               </div>
 
