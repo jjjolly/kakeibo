@@ -23,6 +23,9 @@ const ExpenseClassifier = () => {
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [isImporting, setIsImporting] = useState(false);
 
+  // 分類モード: 'single'（個別処理）または 'batch'（一括処理）
+  const [classifyMode, setClassifyMode] = useState('batch');
+
   // 一括処理用の各レコードの入力データを管理
   const [batchRecordData, setBatchRecordData] = useState({});
 
@@ -241,7 +244,10 @@ const ExpenseClassifier = () => {
     return () => unsubscribe();
   }, [currentUser]);
 
-  const pendingRecords = records.filter(r => r.status === 'pending');
+  // 未処理レコードを日付順（古い順）にソート
+  const pendingRecords = records
+    .filter(r => r.status === 'pending')
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
   const currentRecord = pendingRecords.length > 0 ? pendingRecords[0] : null;
   const closedRecords = records.filter(r => r.status === 'closed');
 
@@ -518,6 +524,19 @@ const ExpenseClassifier = () => {
         updatedAt: new Date().toISOString(),
         updatedBy: currentUser?.displayName || currentUser?.email
       });
+
+      // Google Sheetsに同期
+      try {
+        const completeRecord = {
+          ...editingRecord,
+          ...updatedData
+        };
+        await updateRecordToSheet(completeRecord);
+      } catch (sheetError) {
+        console.error('Google Sheets sync error:', sheetError);
+        // Google Sheetsの同期に失敗してもFirestoreは更新されているので続行
+      }
+
       closeEditModal();
     } catch (error) {
       console.error('更新エラー:', error);
@@ -1565,6 +1584,107 @@ const ExpenseClassifier = () => {
                 </div>
               </div>
 
+              {/* 月別推移グラフ */}
+              <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                <h2 className="text-lg font-bold text-gray-800 mb-4">月別推移</h2>
+                {(() => {
+                  // 全月の統計を計算
+                  const allMonthsStats = months.map(month => ({
+                    month,
+                    ...calculateMonthlyStats(month)
+                  }));
+
+                  // 最大値を計算（スケーリング用）
+                  const maxAmount = Math.max(...allMonthsStats.map(s => s.totalAmount), 1);
+
+                  return (
+                    <div className="space-y-6">
+                      {/* 合計支出の推移 */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">合計支出</h3>
+                        <div className="space-y-2">
+                          {allMonthsStats.map(monthStat => {
+                            const heightPercent = (monthStat.totalAmount / maxAmount) * 100;
+                            return (
+                              <div key={monthStat.month} className="flex items-center gap-3">
+                                <div className="w-20 text-sm font-semibold text-gray-600">
+                                  {formatMonth(monthStat.month)}
+                                </div>
+                                <div className="flex-1 flex items-center gap-2">
+                                  <div className="flex-1 bg-gray-100 rounded-full h-8 overflow-hidden">
+                                    <div
+                                      className="bg-indigo-500 h-full rounded-full flex items-center justify-end pr-2 transition-all"
+                                      style={{ width: `${heightPercent}%` }}
+                                    >
+                                      {heightPercent > 15 && (
+                                        <span className="text-white text-xs font-semibold">
+                                          ¥{monthStat.totalAmount.toLocaleString()}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  {heightPercent <= 15 && (
+                                    <span className="text-sm font-semibold text-gray-700 w-24">
+                                      ¥{monthStat.totalAmount.toLocaleString()}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 固定費・変動費の推移 */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">固定費・変動費の推移</h3>
+                        <div className="space-y-2">
+                          {allMonthsStats.map(monthStat => {
+                            const fixedPercent = (monthStat.fixedCostTotal / maxAmount) * 100;
+                            const variablePercent = (monthStat.variableCostTotal / maxAmount) * 100;
+                            return (
+                              <div key={monthStat.month} className="flex items-center gap-3">
+                                <div className="w-20 text-sm font-semibold text-gray-600">
+                                  {formatMonth(monthStat.month)}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex gap-1 h-8">
+                                    <div
+                                      className="bg-blue-500 rounded-l-full flex items-center justify-center text-white text-xs font-semibold"
+                                      style={{ width: `${fixedPercent}%` }}
+                                      title={`固定費: ¥${monthStat.fixedCostTotal.toLocaleString()}`}
+                                    >
+                                      {fixedPercent > 8 && `¥${monthStat.fixedCostTotal.toLocaleString()}`}
+                                    </div>
+                                    <div
+                                      className="bg-green-500 rounded-r-full flex items-center justify-center text-white text-xs font-semibold"
+                                      style={{ width: `${variablePercent}%` }}
+                                      title={`変動費: ¥${monthStat.variableCostTotal.toLocaleString()}`}
+                                    >
+                                      {variablePercent > 8 && `¥${monthStat.variableCostTotal.toLocaleString()}`}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex items-center gap-4 mt-4 justify-center">
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                            <span className="text-sm text-gray-600">固定費</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-green-500 rounded"></div>
+                            <span className="text-sm text-gray-600">変動費</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
               {/* 月別集計 */}
               {stats && (
                 <>
@@ -1855,8 +1975,203 @@ const ExpenseClassifier = () => {
           </div>
         </div>
 
-        {/* 未処理レコード一覧 */}
-        <div className="space-y-4">
+        {/* モード切り替えボタン */}
+        <div className="bg-white rounded-2xl shadow-xl p-4 mb-4">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setClassifyMode('single')}
+              className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all text-sm ${
+                classifyMode === 'single'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              個別処理モード
+            </button>
+            <button
+              type="button"
+              onClick={() => setClassifyMode('batch')}
+              className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all text-sm ${
+                classifyMode === 'batch'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              一括処理モード
+            </button>
+          </div>
+        </div>
+
+        {/* 個別処理モード */}
+        {classifyMode === 'single' && currentRecord && (
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <CreditCard className="w-5 h-5 text-indigo-600" />
+                <span className="text-sm font-semibold text-indigo-600">{currentRecord.paymentMethod}</span>
+              </div>
+              <div className="text-sm text-gray-500 mb-1">{currentRecord.date}</div>
+              <div className="text-2xl font-bold text-gray-800 mb-1">{currentRecord.merchant}</div>
+              <div className="text-3xl font-bold text-indigo-600">¥{currentRecord.amount.toLocaleString()}</div>
+              <div className="text-sm text-gray-500 mt-2">
+                残り {pendingRecords.length - 1} 件
+              </div>
+            </div>
+
+            {/* カテゴリ選択 */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                カテゴリ <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 text-lg"
+              >
+                <option value="">選択してください</option>
+                {Object.entries(categories).map(([groupName, items]) => (
+                  <optgroup key={groupName} label={groupName}>
+                    {items.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+
+            {/* 精算有無 */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                精算有無 <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setNeedsSettlement('yes')}
+                  className={`py-4 px-6 rounded-lg border-2 transition-all ${
+                    needsSettlement === 'yes'
+                      ? 'border-green-500 bg-green-50 text-green-700 font-semibold'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  精算有
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNeedsSettlement('no')}
+                  className={`py-4 px-6 rounded-lg border-2 transition-all ${
+                    needsSettlement === 'no'
+                      ? 'border-orange-500 bg-orange-50 text-orange-700 font-semibold'
+                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                  }`}
+                >
+                  精算不要
+                </button>
+              </div>
+            </div>
+
+            {/* 精算設定 */}
+            {needsSettlement === 'yes' && (
+              <>
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    精算相手 <span className="text-red-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSettleWith(getOtherUser())}
+                      className={`py-3 px-4 rounded-lg border-2 transition-all ${
+                        settleWith === getOtherUser()
+                          ? 'border-purple-500 bg-purple-50 text-purple-700 font-semibold'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      {getOtherUser()}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettleWith('Other')}
+                      className={`py-3 px-4 rounded-lg border-2 transition-all ${
+                        settleWith === 'Other'
+                          ? 'border-purple-500 bg-purple-50 text-purple-700 font-semibold'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      Other
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    精算方法 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={settlementRatioType}
+                    onChange={(e) => setSettlementRatioType(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="">選択してください</option>
+                    <option value="full">立替（全額相手負担）</option>
+                    <option value="half">折半（半分ずつ）</option>
+                    <option value="ratio">比率（割合で指定）</option>
+                    <option value="amount">金額指定</option>
+                  </select>
+                </div>
+
+                {settlementRatioType === 'ratio' && (
+                  <div className="mb-6 bg-teal-50 p-4 rounded-lg">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      自分の支払い割合 (10分の{myRatio || '?'})
+                    </label>
+                    <select
+                      value={myRatio}
+                      onChange={(e) => setMyRatio(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg"
+                    >
+                      <option value="">選択</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                        <option key={num} value={num}>{num}/10</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {settlementRatioType === 'amount' && (
+                  <div className="mb-6 bg-teal-50 p-4 rounded-lg">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      自分の支払い金額
+                    </label>
+                    <input
+                      type="number"
+                      value={myAmount}
+                      onChange={(e) => setMyAmount(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg"
+                      placeholder="金額を入力"
+                    />
+                    <div className="text-sm text-gray-600 mt-2">
+                      相手: ¥{(currentRecord.amount - parseInt(myAmount || 0)).toLocaleString()}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSave}
+              className="w-full py-4 bg-indigo-600 text-white rounded-xl font-semibold text-lg hover:bg-indigo-700 transition-colors shadow-lg"
+            >
+              保存して次へ
+            </button>
+          </div>
+        )}
+
+        {/* 一括処理モード */}
+        {classifyMode === 'batch' && (
+          <div className="space-y-4">
           {pendingRecords.map((record) => {
             const data = batchRecordData[record.id] || {};
 
@@ -2103,6 +2418,7 @@ const ExpenseClassifier = () => {
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
