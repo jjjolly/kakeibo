@@ -55,6 +55,10 @@ export const fetchSpreadsheetData = async (userName, range = 'Master!A2:M') => {
         const processStatus = (row[6] || '').toString().trim();
         const isProcessed = processStatus === '処理済み';
 
+        // I列の精算有無を'あり'→'yes'、それ以外→'no'に変換
+        const needsSettlementValue = (row[8] || '').toString().trim();
+        const needsSettlement = needsSettlementValue === 'あり' ? 'yes' : 'no';
+
         return {
           date: row[0] || '', // A列: 日付 (YYYY-MM-DD形式)
           merchant: row[1] || '', // B列: 店名
@@ -63,7 +67,7 @@ export const fetchSpreadsheetData = async (userName, range = 'Master!A2:M') => {
           owner: row[4] || '', // E列: 所有者（Seigo/Hanaka）
           isProcessed: isProcessed, // G列が「処理済み」かどうか
           category: row[7] || '', // H列: カテゴリ
-          needsSettlement: row[8] || '', // I列: 精算有無
+          needsSettlement: needsSettlement, // I列: 精算有無（'yes'/'no'に統一）
           settleWith: row[9] || '', // J列: 精算相手
           settlementMethod: row[10] || '', // K列: 精算方法
           settlementDetail: row[11] || '', // L列: 精算方法詳細

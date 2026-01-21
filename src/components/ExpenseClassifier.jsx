@@ -168,14 +168,14 @@ const ExpenseClassifier = () => {
               owner: row.owner,
               payer: row.owner, // 入力者=所有者
               category: row.category || null,
-              needsSettlement: row.needsSettlement === 'あり' ? 'yes' : 'no',
+              needsSettlement: row.needsSettlement, // googleSheets.jsで既に'yes'/'no'に変換済み
               settleWith: row.settleWith || null,
               settlementRatio: row.settlementMethod || null,
               settlementRatioType: null, // 過去データのため詳細不明
               myRatio: null,
               myAmount: null,
               settlementAmountValue: null,
-              settlementStatus: row.needsSettlement === 'あり' ? 'unsettled' : null,
+              settlementStatus: row.needsSettlement === 'yes' ? 'unsettled' : null,
               status: 'closed', // 処理済み
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
