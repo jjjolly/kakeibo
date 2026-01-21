@@ -34,6 +34,10 @@ const ExpenseClassifier = () => {
   // 一括処理で選択されたレコードID
   const [batchSelectedRecords, setBatchSelectedRecords] = useState([]);
 
+  // 処理中フラグとメッセージ
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState('');
+
   // 相手のユーザー名を取得
   const getOtherUser = () => {
     return currentUser?.displayName === 'Seigo' ? 'Hanaka' : 'Seigo';
@@ -424,6 +428,9 @@ const ExpenseClassifier = () => {
       return;
     }
 
+    setIsProcessing(true);
+    setProcessingMessage(`${selectedRecords.length}件の精算処理中...`);
+
     try {
       const settledDate = new Date();
       const settlementCompletedDate = settledDate.toISOString().split('T')[0]; // YYYY-MM-DD形式
@@ -457,10 +464,20 @@ const ExpenseClassifier = () => {
     } catch (error) {
       console.error('精算エラー:', error);
       alert('精算処理に失敗しました: ' + error.message);
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
     }
   };
 
   const settleAllWithPerson = async (person) => {
+    const recordsToSettleCount = records.filter(
+      r => r.settleWith === person && r.settlementStatus === 'unsettled'
+    ).length;
+
+    setIsProcessing(true);
+    setProcessingMessage(`${person}との${recordsToSettleCount}件の精算処理中...`);
+
     try {
       const settledDate = new Date();
       const settlementCompletedDate = settledDate.toISOString().split('T')[0]; // YYYY-MM-DD形式
@@ -498,6 +515,9 @@ const ExpenseClassifier = () => {
     } catch (error) {
       console.error('精算エラー:', error);
       alert('精算処理に失敗しました: ' + error.message);
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
     }
   };
 
@@ -522,10 +542,25 @@ const ExpenseClassifier = () => {
   };
 
   const saveEditedRecord = async (updatedData) => {
+    setIsProcessing(true);
+    setProcessingMessage('更新中...');
+
     try {
       const recordRef = doc(db, 'records', editingRecord.id);
+
+      // 未精算→精算済みに変更された場合、精算完了日を追加
+      let finalUpdatedData = { ...updatedData };
+      if (editingRecord.settlementStatus === 'unsettled' && updatedData.settlementStatus === 'settled') {
+        const settlementCompletedDate = new Date().toISOString().split('T')[0];
+        finalUpdatedData.settlementCompletedDate = settlementCompletedDate;
+      }
+      // 精算済み→未精算に変更された場合、精算完了日を削除
+      else if (editingRecord.settlementStatus === 'settled' && updatedData.settlementStatus === 'unsettled') {
+        finalUpdatedData.settlementCompletedDate = '';
+      }
+
       await updateDoc(recordRef, {
-        ...updatedData,
+        ...finalUpdatedData,
         updatedAt: new Date().toISOString(),
         updatedBy: currentUser?.displayName || currentUser?.email
       });
@@ -534,7 +569,7 @@ const ExpenseClassifier = () => {
       try {
         const completeRecord = {
           ...editingRecord,
-          ...updatedData
+          ...finalUpdatedData
         };
         await updateRecordToSheet(completeRecord);
       } catch (sheetError) {
@@ -546,6 +581,9 @@ const ExpenseClassifier = () => {
     } catch (error) {
       console.error('更新エラー:', error);
       alert('更新に失敗しました: ' + error.message);
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
     }
   };
 
@@ -1005,6 +1043,9 @@ const ExpenseClassifier = () => {
       settlementAmountValue = theirAmount;
     }
 
+    setIsProcessing(true);
+    setProcessingMessage('保存中...');
+
     try {
       const processedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式の処理日
 
@@ -1057,6 +1098,9 @@ const ExpenseClassifier = () => {
     } catch (error) {
       console.error('保存エラー:', error);
       alert('保存に失敗しました: ' + error.message);
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
     }
   };
 
@@ -1088,6 +1132,9 @@ const ExpenseClassifier = () => {
         return;
       }
     }
+
+    setIsProcessing(true);
+    setProcessingMessage(`${selectedRecordsToSave.length}件のレコードを保存中...`);
 
     try {
       const payer = currentUser?.displayName;
@@ -1170,6 +1217,9 @@ const ExpenseClassifier = () => {
     } catch (error) {
       console.error('一括保存エラー:', error);
       alert('保存に失敗しました: ' + error.message);
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
     }
   };
 
@@ -1290,7 +1340,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
               >
                 <div className="text-sm">分類</div>
-                <div className="text-xs mt-1">未処理: {pendingRecords.length}件</div>
+                <div className="text-xs mt-1">{pendingRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1298,7 +1348,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white whitespace-nowrap"
               >
                 <div className="text-sm">精算管理</div>
-                <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
+                <div className="text-xs mt-1">{unsettledRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1306,7 +1356,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
               >
                 <div className="text-sm">履歴</div>
-                <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+                <div className="text-xs mt-1">{closedRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1945,6 +1995,7 @@ const ExpenseClassifier = () => {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-2xl mx-auto pt-8">
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
@@ -2544,6 +2595,20 @@ const ExpenseClassifier = () => {
         )}
       </div>
     </div>
+
+    {/* 処理中オーバーレイ */}
+    {isProcessing && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm mx-4">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600"></div>
+            <div className="text-xl font-semibold text-gray-800">{processingMessage}</div>
+            <div className="text-sm text-gray-500">しばらくお待ちください...</div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
