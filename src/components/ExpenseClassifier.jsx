@@ -31,6 +31,9 @@ const ExpenseClassifier = () => {
   // 一括処理用の各レコードの入力データを管理
   const [batchRecordData, setBatchRecordData] = useState({});
 
+  // 一括処理で選択されたレコードID
+  const [batchSelectedRecords, setBatchSelectedRecords] = useState([]);
+
   // 相手のユーザー名を取得
   const getOtherUser = () => {
     return currentUser?.displayName === 'Seigo' ? 'Hanaka' : 'Seigo';
@@ -92,7 +95,7 @@ const ExpenseClassifier = () => {
 
   const categories = {
     '固定費': ['住宅費', '水道光熱費', '通信料', 'サブスク費', 'その他'],
-    '変動費': ['食費', '日用品費', '医療費', '被服費', '美容費', '交際費', '娯楽費', '交通費', '雑費', '特別費', 'ジャック養育費']
+    '変動費': ['食費', '日用品費', '医療費', '被服費', '美容費', '交際費', '娯楽費', '交通費', '雑費', '特別費', 'ジャック']
   };
 
   // 店名から過去の最頻カテゴリを推定
@@ -1059,10 +1062,18 @@ const ExpenseClassifier = () => {
 
   // 一括保存処理
   const handleBatchSave = async () => {
-    const pendingRecords = records.filter(r => r.status === 'pending');
+    // 選択されたレコードのみ取得
+    const selectedRecordsToSave = records.filter(r =>
+      r.status === 'pending' && batchSelectedRecords.includes(r.id)
+    );
+
+    if (selectedRecordsToSave.length === 0) {
+      alert('保存するレコードを選択してください');
+      return;
+    }
 
     // バリデーション
-    for (const record of pendingRecords) {
+    for (const record of selectedRecordsToSave) {
       const data = batchRecordData[record.id];
       if (!data || !data.category) {
         alert(`${record.merchant} のカテゴリを選択してください`);
@@ -1082,8 +1093,8 @@ const ExpenseClassifier = () => {
       const payer = currentUser?.displayName;
       const processedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式の処理日
 
-      // 全てのレコードを並列で処理
-      const updatePromises = pendingRecords.map(async (record) => {
+      // 選択されたレコードのみを並列で処理
+      const updatePromises = selectedRecordsToSave.map(async (record) => {
         const data = batchRecordData[record.id];
 
         let finalRatio = '';
@@ -1145,10 +1156,17 @@ const ExpenseClassifier = () => {
 
       await Promise.all(updatePromises);
 
-      // 一括データをクリア
-      setBatchRecordData({});
+      // 選択をクリア
+      setBatchSelectedRecords([]);
 
-      alert(`${pendingRecords.length}件のレコードを保存しました`);
+      // 保存したレコードの一括データをクリア
+      const newBatchData = { ...batchRecordData };
+      selectedRecordsToSave.forEach(record => {
+        delete newBatchData[record.id];
+      });
+      setBatchRecordData(newBatchData);
+
+      alert(`${selectedRecordsToSave.length}件のレコードを保存しました`);
     } catch (error) {
       console.error('一括保存エラー:', error);
       alert('保存に失敗しました: ' + error.message);
@@ -1269,7 +1287,7 @@ const ExpenseClassifier = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('classify')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
               >
                 <div className="text-sm">分類</div>
                 <div className="text-xs mt-1">未処理: {pendingRecords.length}件</div>
@@ -1277,7 +1295,7 @@ const ExpenseClassifier = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('settlement')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white"
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white whitespace-nowrap"
               >
                 <div className="text-sm">精算管理</div>
                 <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
@@ -1285,7 +1303,7 @@ const ExpenseClassifier = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('history')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
               >
                 <div className="text-sm">履歴</div>
                 <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
@@ -1293,7 +1311,7 @@ const ExpenseClassifier = () => {
               <button
                 type="button"
                 onClick={() => setActiveTab('analytics')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
               >
                 <div className="text-sm">統計</div>
                 <div className="text-xs mt-1">月別集計</div>
@@ -1672,24 +1690,14 @@ const ExpenseClassifier = () => {
                                 <div className="w-20 text-sm font-semibold text-gray-600">
                                   {formatMonth(data.month)}
                                 </div>
-                                <div className="flex-1 flex items-center gap-2">
-                                  <div className="flex-1 bg-gray-100 rounded-lg h-10 overflow-hidden relative">
-                                    <div
-                                      className="bg-indigo-500 h-full rounded-lg flex items-center justify-end pr-3 transition-all duration-300"
-                                      style={{ width: `${heightPercent}%` }}
-                                    >
-                                      {heightPercent > 20 && (
-                                        <span className="text-white text-xs font-semibold">
-                                          ¥{data.amount.toLocaleString()}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  {heightPercent <= 20 && (
-                                    <span className="text-sm font-semibold text-gray-700 w-24 text-right">
-                                      ¥{data.amount.toLocaleString()}
-                                    </span>
-                                  )}
+                                <div className="flex-1 bg-gray-100 rounded-lg h-10 overflow-hidden relative">
+                                  <div
+                                    className="bg-indigo-500 h-full rounded-lg transition-all duration-300"
+                                    style={{ width: `${heightPercent}%` }}
+                                  ></div>
+                                </div>
+                                <div className="w-28 text-sm font-semibold text-gray-700 text-right">
+                                  ¥{data.amount.toLocaleString()}
                                 </div>
                               </div>
                             );
@@ -1959,29 +1967,11 @@ const ExpenseClassifier = () => {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleImportFromSheets}
-            disabled={isImporting}
-            className="w-full mb-4 py-3 px-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400"
-          >
-            {isImporting ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                取り込み中...
-              </>
-            ) : (
-              <>
-                📊 Google Sheetsから取り込む
-              </>
-            )}
-          </button>
-
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setActiveTab('classify')}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white"
+              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white whitespace-nowrap"
             >
               <div className="text-sm">分類</div>
               <div className="text-xs mt-1">未処理: {pendingRecords.length}件</div>
@@ -1989,7 +1979,7 @@ const ExpenseClassifier = () => {
             <button
               type="button"
               onClick={() => setActiveTab('settlement')}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
             >
               <div className="text-sm">精算管理</div>
               <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
@@ -1997,7 +1987,7 @@ const ExpenseClassifier = () => {
             <button
               type="button"
               onClick={() => setActiveTab('history')}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
             >
               <div className="text-sm">履歴</div>
               <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
@@ -2005,13 +1995,31 @@ const ExpenseClassifier = () => {
             <button
               type="button"
               onClick={() => setActiveTab('analytics')}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
+              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
             >
               <div className="text-sm">統計</div>
               <div className="text-xs mt-1">月別集計</div>
             </button>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleImportFromSheets}
+          disabled={isImporting}
+          className="w-full mb-4 py-3 px-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400"
+        >
+          {isImporting ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              取り込み中...
+            </>
+          ) : (
+            <>
+              📊 Google Sheetsから取り込む
+            </>
+          )}
+        </button>
 
         {/* モード切り替えボタン */}
         <div className="bg-white rounded-2xl shadow-xl p-4 mb-4">
@@ -2155,17 +2163,52 @@ const ExpenseClassifier = () => {
                   <label className="block text-sm font-semibold text-gray-700 mb-3">
                     精算方法 <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    value={settlementRatioType}
-                    onChange={(e) => setSettlementRatioType(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">選択してください</option>
-                    <option value="full">立替（全額相手負担）</option>
-                    <option value="half">折半（半分ずつ）</option>
-                    <option value="ratio">比率（割合で指定）</option>
-                    <option value="amount">金額指定</option>
-                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSettlementRatioType('full')}
+                      className={`py-3 px-4 rounded-lg border-2 transition-all text-sm ${
+                        settlementRatioType === 'full'
+                          ? 'border-teal-500 bg-teal-50 text-teal-700 font-semibold'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      立替（全額相手負担）
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettlementRatioType('half')}
+                      className={`py-3 px-4 rounded-lg border-2 transition-all text-sm ${
+                        settlementRatioType === 'half'
+                          ? 'border-teal-500 bg-teal-50 text-teal-700 font-semibold'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      折半（半分ずつ）
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettlementRatioType('ratio')}
+                      className={`py-3 px-4 rounded-lg border-2 transition-all text-sm ${
+                        settlementRatioType === 'ratio'
+                          ? 'border-teal-500 bg-teal-50 text-teal-700 font-semibold'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      比率（割合で指定）
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSettlementRatioType('amount')}
+                      className={`py-3 px-4 rounded-lg border-2 transition-all text-sm ${
+                        settlementRatioType === 'amount'
+                          ? 'border-teal-500 bg-teal-50 text-teal-700 font-semibold'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      金額指定
+                    </button>
+                  </div>
                 </div>
 
                 {settlementRatioType === 'ratio' && (
@@ -2219,23 +2262,69 @@ const ExpenseClassifier = () => {
         {/* 一括処理モード */}
         {classifyMode === 'batch' && (
           <div className="space-y-4">
+          {/* 一括保存ボタン（上部） */}
+          {pendingRecords.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-xl p-4">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (batchSelectedRecords.length === pendingRecords.length) {
+                      setBatchSelectedRecords([]);
+                    } else {
+                      setBatchSelectedRecords(pendingRecords.map(r => r.id));
+                    }
+                  }}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-semibold"
+                >
+                  {batchSelectedRecords.length === pendingRecords.length ? '全て選択解除' : '全て選択'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBatchSave}
+                  disabled={batchSelectedRecords.length === 0}
+                  className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-semibold text-lg hover:bg-indigo-700 transition-colors shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {batchSelectedRecords.length === 0
+                    ? '選択してください'
+                    : `選択した${batchSelectedRecords.length}件を一括保存`}
+                </button>
+              </div>
+            </div>
+          )}
+
           {pendingRecords.map((record) => {
             const data = batchRecordData[record.id] || {};
+            const isSelected = batchSelectedRecords.includes(record.id);
 
             return (
-              <div key={record.id} className="bg-white rounded-2xl shadow-xl p-6">
+              <div key={record.id} className={`bg-white rounded-2xl shadow-xl p-6 ${isSelected ? 'ring-2 ring-indigo-500' : ''}`}>
                 {/* レコード情報 */}
                 <div className="mb-4 pb-4 border-b border-gray-200">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <div className="text-sm text-gray-500">{record.date}</div>
-                      <div className="text-xl font-bold text-gray-800">{record.merchant}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-indigo-600">¥{record.amount.toLocaleString()}</div>
-                      <div className="flex items-center gap-2 justify-end mt-1">
-                        <CreditCard className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-600">{record.paymentMethod}</span>
+                  <div className="flex items-center gap-3 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setBatchSelectedRecords([...batchSelectedRecords, record.id]);
+                        } else {
+                          setBatchSelectedRecords(batchSelectedRecords.filter(id => id !== record.id));
+                        }
+                      }}
+                      className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <div className="flex-1 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-500">{record.date}</div>
+                        <div className="text-xl font-bold text-gray-800">{record.merchant}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-indigo-600">¥{record.amount.toLocaleString()}</div>
+                        <div className="flex items-center gap-2 justify-end mt-1">
+                          <CreditCard className="w-4 h-4 text-gray-500" />
+                          <span className="text-sm text-gray-600">{record.paymentMethod}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2451,19 +2540,6 @@ const ExpenseClassifier = () => {
               </div>
             );
           })}
-
-          {/* 一括保存ボタン */}
-          {pendingRecords.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-xl p-6">
-              <button
-                type="button"
-                onClick={handleBatchSave}
-                className="w-full py-4 bg-indigo-600 text-white rounded-xl font-semibold text-lg hover:bg-indigo-700 transition-colors shadow-lg"
-              >
-                全{pendingRecords.length}件を一括保存
-              </button>
-            </div>
-          )}
         </div>
         )}
       </div>

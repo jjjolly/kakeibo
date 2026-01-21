@@ -80,12 +80,6 @@ const Auth = () => {
             {loading ? 'ログイン中...' : 'ログイン'}
           </button>
         </form>
-
-        <div className="mt-6 text-center text-sm text-gray-500">
-          <p>テストアカウント:</p>
-          <p>seigo@example.com / password123</p>
-          <p>hanaka@example.com / password123</p>
-        </div>
       </div>
     </div>
   );
