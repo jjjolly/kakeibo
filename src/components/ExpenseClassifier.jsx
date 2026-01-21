@@ -18,6 +18,8 @@ const ExpenseClassifier = () => {
   const [myAmount, setMyAmount] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('2026-01');
   const [activeTab, setActiveTab] = useState('classify');
+  const [analyticsSubTab, setAnalyticsSubTab] = useState('monthly'); // 'monthly' or 'category'
+  const [selectedCategory, setSelectedCategory] = useState(''); // 月別推移で選択されたカテゴリ
   const [editingRecord, setEditingRecord] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRecords, setSelectedRecords] = useState([]);
@@ -89,8 +91,8 @@ const ExpenseClassifier = () => {
   }, [records]);
 
   const categories = {
-    '固定費': ['住宅費', '水道光熱費', '通信料', '交通費', 'サブスク費', 'その他'],
-    '変動費': ['食費', '日用品費', '医療費', '被服費', '美容費', '交際費', '娯楽費', '雑費', '特別費', 'ジャック養育費']
+    '固定費': ['住宅費', '水道光熱費', '通信料', 'サブスク費', 'その他'],
+    '変動費': ['食費', '日用品費', '医療費', '被服費', '美容費', '交際費', '娯楽費', '交通費', '雑費', '特別費', 'ジャック養育費']
   };
 
   // 店名から過去の最頻カテゴリを推定
@@ -1001,6 +1003,8 @@ const ExpenseClassifier = () => {
     }
 
     try {
+      const processedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式の処理日
+
       // Firestoreのドキュメントを更新
       const recordRef = doc(db, 'records', currentRecord.id);
       await updateDoc(recordRef, {
@@ -1014,6 +1018,7 @@ const ExpenseClassifier = () => {
         myAmount: needsSettlement === 'yes' && settlementRatioType === 'amount' ? parseInt(myAmount) : null,
         settlementAmountValue: needsSettlement === 'yes' ? Math.round(settlementAmountValue) : null,
         settlementStatus: needsSettlement === 'yes' ? 'unsettled' : null,
+        processedDate: processedDate, // 処理日を追加
         status: 'closed',
         updatedAt: new Date().toISOString(),
         updatedBy: currentUser?.displayName || currentUser?.email
@@ -1029,7 +1034,9 @@ const ExpenseClassifier = () => {
           settleWith: needsSettlement === 'yes' ? settleWith : '',
           settlementRatioType: needsSettlement === 'yes' ? settlementRatioType : '',
           myRatio: needsSettlement === 'yes' && settlementRatioType === 'ratio' ? myRatio : '',
-          myAmount: needsSettlement === 'yes' && settlementRatioType === 'amount' ? parseInt(myAmount) : ''
+          myAmount: needsSettlement === 'yes' && settlementRatioType === 'amount' ? parseInt(myAmount) : '',
+          settlementStatus: needsSettlement === 'yes' ? 'unsettled' : '',
+          processedDate: processedDate // 処理日を追加
         });
         console.log('Google Sheetsへの書き戻し成功');
       } catch (sheetError) {
@@ -1073,6 +1080,7 @@ const ExpenseClassifier = () => {
 
     try {
       const payer = currentUser?.displayName;
+      const processedDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD形式の処理日
 
       // 全てのレコードを並列で処理
       const updatePromises = pendingRecords.map(async (record) => {
@@ -1110,6 +1118,7 @@ const ExpenseClassifier = () => {
           myAmount: data.needsSettlement === 'yes' && data.settlementRatioType === 'amount' ? parseInt(data.myAmount) : null,
           settlementAmountValue: data.needsSettlement === 'yes' ? Math.round(settlementAmountValue) : null,
           settlementStatus: data.needsSettlement === 'yes' ? 'unsettled' : null,
+          processedDate: processedDate, // 処理日を追加
           status: 'closed',
           updatedAt: new Date().toISOString(),
           updatedBy: currentUser?.displayName || currentUser?.email
@@ -1125,7 +1134,9 @@ const ExpenseClassifier = () => {
             settleWith: data.needsSettlement === 'yes' ? data.settleWith : '',
             settlementRatioType: data.needsSettlement === 'yes' ? data.settlementRatioType : '',
             myRatio: data.needsSettlement === 'yes' && data.settlementRatioType === 'ratio' ? data.myRatio : '',
-            myAmount: data.needsSettlement === 'yes' && data.settlementRatioType === 'amount' ? parseInt(data.myAmount) : ''
+            myAmount: data.needsSettlement === 'yes' && data.settlementRatioType === 'amount' ? parseInt(data.myAmount) : '',
+            settlementStatus: data.needsSettlement === 'yes' ? 'unsettled' : '',
+            processedDate: processedDate // 処理日を追加
           });
         } catch (sheetError) {
           console.error('Google Sheets書き戻しエラー:', sheetError);
@@ -1563,69 +1574,120 @@ const ExpenseClassifier = () => {
             </div>
           ) : (
             <>
-              {/* 月選択 */}
-              <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-                <h2 className="text-lg font-bold text-gray-800 mb-4">月を選択</h2>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {months.map(month => (
-                    <button
-                      key={month}
-                      type="button"
-                      onClick={() => setSelectedMonth(month)}
-                      className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
-                        selectedMonth === month
-                          ? 'bg-indigo-600 text-white font-semibold'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {formatMonth(month)}
-                    </button>
-                  ))}
+              {/* サブタブ切り替え */}
+              <div className="bg-white rounded-2xl shadow-xl p-4 mb-6">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsSubTab('monthly')}
+                    className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
+                      analyticsSubTab === 'monthly'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    月別推移
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAnalyticsSubTab('category')}
+                    className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all ${
+                      analyticsSubTab === 'category'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    カテゴリ別
+                  </button>
                 </div>
               </div>
 
-              {/* 月別推移グラフ */}
-              <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
-                <h2 className="text-lg font-bold text-gray-800 mb-4">月別推移</h2>
-                {(() => {
-                  // 全月の統計を計算
-                  const allMonthsStats = months.map(month => ({
-                    month,
-                    ...calculateMonthlyStats(month)
-                  }));
+              {/* 月別推移タブ */}
+              {analyticsSubTab === 'monthly' && (
+                <>
+                  {/* カテゴリ選択 */}
+                  <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                      カテゴリを選択
+                    </label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="">全支出</option>
+                      <option value="_fixed">固定費合計</option>
+                      <option value="_variable">変動費合計</option>
+                      <optgroup label="固定費">
+                        {categories['固定費'].map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="変動費">
+                        {categories['変動費'].map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                  </div>
 
-                  // 最大値を計算（スケーリング用）
-                  const maxAmount = Math.max(...allMonthsStats.map(s => s.totalAmount), 1);
+                  {/* 月別推移グラフ */}
+                  <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-6">
+                      {selectedCategory === '' && '全支出の推移'}
+                      {selectedCategory === '_fixed' && '固定費の推移'}
+                      {selectedCategory === '_variable' && '変動費の推移'}
+                      {selectedCategory && !selectedCategory.startsWith('_') && `${selectedCategory}の推移`}
+                    </h3>
+                    {(() => {
+                      // 全月の統計を計算
+                      const allMonthsStats = months.map(month => ({
+                        month,
+                        ...calculateMonthlyStats(month)
+                      }));
 
-                  return (
-                    <div className="space-y-6">
-                      {/* 合計支出の推移 */}
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-700 mb-3">合計支出</h3>
+                      // 選択されたカテゴリのデータを抽出
+                      let chartData;
+                      if (selectedCategory === '') {
+                        chartData = allMonthsStats.map(s => ({ month: s.month, amount: s.totalAmount }));
+                      } else if (selectedCategory === '_fixed') {
+                        chartData = allMonthsStats.map(s => ({ month: s.month, amount: s.fixedCostTotal }));
+                      } else if (selectedCategory === '_variable') {
+                        chartData = allMonthsStats.map(s => ({ month: s.month, amount: s.variableCostTotal }));
+                      } else {
+                        chartData = allMonthsStats.map(s => ({
+                          month: s.month,
+                          amount: s.categoryTotals[selectedCategory] || 0
+                        }));
+                      }
+
+                      const maxAmount = Math.max(...chartData.map(d => d.amount), 1);
+
+                      return (
                         <div className="space-y-2">
-                          {allMonthsStats.map(monthStat => {
-                            const heightPercent = (monthStat.totalAmount / maxAmount) * 100;
+                          {chartData.map((data, index) => {
+                            const heightPercent = (data.amount / maxAmount) * 100;
                             return (
-                              <div key={monthStat.month} className="flex items-center gap-3">
+                              <div key={data.month} className="flex items-center gap-3">
                                 <div className="w-20 text-sm font-semibold text-gray-600">
-                                  {formatMonth(monthStat.month)}
+                                  {formatMonth(data.month)}
                                 </div>
                                 <div className="flex-1 flex items-center gap-2">
-                                  <div className="flex-1 bg-gray-100 rounded-full h-8 overflow-hidden">
+                                  <div className="flex-1 bg-gray-100 rounded-lg h-10 overflow-hidden relative">
                                     <div
-                                      className="bg-indigo-500 h-full rounded-full flex items-center justify-end pr-2 transition-all"
+                                      className="bg-indigo-500 h-full rounded-lg flex items-center justify-end pr-3 transition-all duration-300"
                                       style={{ width: `${heightPercent}%` }}
                                     >
-                                      {heightPercent > 15 && (
+                                      {heightPercent > 20 && (
                                         <span className="text-white text-xs font-semibold">
-                                          ¥{monthStat.totalAmount.toLocaleString()}
+                                          ¥{data.amount.toLocaleString()}
                                         </span>
                                       )}
                                     </div>
                                   </div>
-                                  {heightPercent <= 15 && (
-                                    <span className="text-sm font-semibold text-gray-700 w-24">
-                                      ¥{monthStat.totalAmount.toLocaleString()}
+                                  {heightPercent <= 20 && (
+                                    <span className="text-sm font-semibold text-gray-700 w-24 text-right">
+                                      ¥{data.amount.toLocaleString()}
                                     </span>
                                   )}
                                 </div>
@@ -1633,61 +1695,37 @@ const ExpenseClassifier = () => {
                             );
                           })}
                         </div>
-                      </div>
+                      );
+                    })()}
+                  </div>
+                </>
+              )}
 
-                      {/* 固定費・変動費の推移 */}
-                      <div>
-                        <h3 className="text-sm font-semibold text-gray-700 mb-3">固定費・変動費の推移</h3>
-                        <div className="space-y-2">
-                          {allMonthsStats.map(monthStat => {
-                            const fixedPercent = (monthStat.fixedCostTotal / maxAmount) * 100;
-                            const variablePercent = (monthStat.variableCostTotal / maxAmount) * 100;
-                            return (
-                              <div key={monthStat.month} className="flex items-center gap-3">
-                                <div className="w-20 text-sm font-semibold text-gray-600">
-                                  {formatMonth(monthStat.month)}
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex gap-1 h-8">
-                                    <div
-                                      className="bg-blue-500 rounded-l-full flex items-center justify-center text-white text-xs font-semibold"
-                                      style={{ width: `${fixedPercent}%` }}
-                                      title={`固定費: ¥${monthStat.fixedCostTotal.toLocaleString()}`}
-                                    >
-                                      {fixedPercent > 8 && `¥${monthStat.fixedCostTotal.toLocaleString()}`}
-                                    </div>
-                                    <div
-                                      className="bg-green-500 rounded-r-full flex items-center justify-center text-white text-xs font-semibold"
-                                      style={{ width: `${variablePercent}%` }}
-                                      title={`変動費: ¥${monthStat.variableCostTotal.toLocaleString()}`}
-                                    >
-                                      {variablePercent > 8 && `¥${monthStat.variableCostTotal.toLocaleString()}`}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <div className="flex items-center gap-4 mt-4 justify-center">
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-blue-500 rounded"></div>
-                            <span className="text-sm text-gray-600">固定費</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-green-500 rounded"></div>
-                            <span className="text-sm text-gray-600">変動費</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* 月別集計 */}
-              {stats && (
+              {/* カテゴリ別タブ */}
+              {analyticsSubTab === 'category' && stats && (
                 <>
+                  {/* 月選択 */}
+                  <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+                    <h2 className="text-lg font-bold text-gray-800 mb-4">月を選択</h2>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {months.map(month => (
+                        <button
+                          key={month}
+                          type="button"
+                          onClick={() => setSelectedMonth(month)}
+                          className={`px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                            selectedMonth === month
+                              ? 'bg-indigo-600 text-white font-semibold'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {formatMonth(month)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* サマリーカード */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     {/* 合計支出 */}
                     <div className="bg-white rounded-2xl shadow-xl p-6">
@@ -2024,20 +2062,29 @@ const ExpenseClassifier = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-3">
                 カテゴリ <span className="text-red-500">*</span>
               </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 text-lg"
-              >
-                <option value="">選択してください</option>
+              <div className="space-y-4">
                 {Object.entries(categories).map(([groupName, items]) => (
-                  <optgroup key={groupName} label={groupName}>
-                    {items.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </optgroup>
+                  <div key={groupName}>
+                    <div className="text-sm font-semibold text-gray-600 mb-2">{groupName}</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {items.map(cat => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setCategory(cat)}
+                          className={`py-3 px-4 rounded-lg border-2 transition-all text-sm font-semibold ${
+                            category === cat
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                              : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
-              </select>
+              </div>
             </div>
 
             {/* 精算有無 */}
