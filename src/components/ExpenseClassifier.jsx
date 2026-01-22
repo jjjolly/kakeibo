@@ -1247,24 +1247,6 @@ const ExpenseClassifier = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleImportFromSheets}
-              disabled={isImporting}
-              className="w-full mb-4 py-3 px-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400"
-            >
-              {isImporting ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  取り込み中...
-                </>
-              ) : (
-                <>
-                  📊 Google Sheetsから取り込む
-                </>
-              )}
-            </button>
-
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1300,6 +1282,25 @@ const ExpenseClassifier = () => {
               </button>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleImportFromSheets}
+            disabled={isImporting}
+            className="w-full mb-4 py-3 px-4 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400"
+          >
+            {isImporting ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                取り込み中...
+              </>
+            ) : (
+              <>
+                📊 Google Sheetsから取り込む
+              </>
+            )}
+          </button>
+
           <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
             <Check className="w-20 h-20 text-green-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-800 mb-2">未処理レコードなし</h2>
