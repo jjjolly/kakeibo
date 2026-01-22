@@ -1288,7 +1288,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600"
               >
                 <div className="text-sm">履歴</div>
-                <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+                <div className="text-xs mt-1">{closedRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1623,7 +1623,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
               >
                 <div className="text-sm">履歴</div>
-                <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+                <div className="text-xs mt-1">{closedRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1901,7 +1901,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white"
               >
                 <div className="text-sm">履歴</div>
-                <div className="text-xs mt-1">処理済み: {closedRecords.length}件</div>
+                <div className="text-xs mt-1">{closedRecords.length}件</div>
               </button>
               <button
                 type="button"
