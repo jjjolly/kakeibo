@@ -2052,14 +2052,6 @@ const ExpenseClassifier = () => {
               <div className="text-sm">統計</div>
               <div className="text-xs mt-1">月別集計</div>
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('settings')}
-              className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
-            >
-              <div className="text-sm">設定</div>
-              <div className="text-xs mt-1">管理</div>
-            </button>
           </div>
         </div>
 
