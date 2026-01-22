@@ -26,7 +26,7 @@ const ExpenseClassifier = () => {
   const [isImporting, setIsImporting] = useState(false);
 
   // 分類モード: 'single'（個別処理）または 'batch'（一括処理）
-  const [classifyMode, setClassifyMode] = useState('batch');
+  const [classifyMode, setClassifyMode] = useState('single');
 
   // 一括処理用の各レコードの入力データを管理
   const [batchRecordData, setBatchRecordData] = useState({});
@@ -1229,7 +1229,7 @@ const ExpenseClassifier = () => {
         <div className="max-w-2xl mx-auto pt-8">
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-3xl font-bold text-gray-800">家計簿分類</h1>
+              <h1 className="text-3xl font-bold text-gray-800">おうち決算</h1>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg">
                   <User className="w-4 h-4 text-indigo-600" />
@@ -1278,7 +1278,6 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600"
               >
                 <div className="text-sm">統計</div>
-                <div className="text-xs mt-1">月別集計</div>
               </button>
             </div>
           </div>
@@ -1296,7 +1295,7 @@ const ExpenseClassifier = () => {
               </>
             ) : (
               <>
-                📊 Google Sheetsから取り込む
+                Google Sheetsから取り込む
               </>
             )}
           </button>
@@ -1317,7 +1316,7 @@ const ExpenseClassifier = () => {
         <div className="max-w-2xl mx-auto pt-8">
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-3xl font-bold text-gray-800">家計簿分類</h1>
+              <h1 className="text-3xl font-bold text-gray-800">おうち決算</h1>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg">
                   <User className="w-4 h-4 text-indigo-600" />
@@ -1365,7 +1364,6 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
               >
                 <div className="text-sm">統計</div>
-                <div className="text-xs mt-1">月別集計</div>
               </button>
             </div>
           </div>
@@ -1434,7 +1432,7 @@ const ExpenseClassifier = () => {
 
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-800">未精算レコード一覧</h2>
+                <h2 className="text-xl font-bold text-gray-800">未精算レコード</h2>
                 {unsettledRecords.length > 0 && (
                   <div className="flex gap-2 flex-wrap">
                     <button
@@ -1584,7 +1582,7 @@ const ExpenseClassifier = () => {
         <div className="max-w-2xl mx-auto pt-8">
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-3xl font-bold text-gray-800">統計</h1>
+              <h1 className="text-3xl font-bold text-gray-800">おうち決算</h1>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg">
                   <User className="w-4 h-4 text-indigo-600" />
@@ -1632,7 +1630,6 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white"
               >
                 <div className="text-sm">統計</div>
-                <div className="text-xs mt-1">月別集計</div>
               </button>
             </div>
           </div>
@@ -1862,7 +1859,7 @@ const ExpenseClassifier = () => {
         <div className="max-w-2xl mx-auto pt-8">
           <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-3xl font-bold text-gray-800">家計簿分類</h1>
+              <h1 className="text-3xl font-bold text-gray-800">おうち決算</h1>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg">
                   <User className="w-4 h-4 text-indigo-600" />
@@ -1910,7 +1907,6 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
               >
                 <div className="text-sm">統計</div>
-                <div className="text-xs mt-1">月別集計</div>
               </button>
             </div>
           </div>
@@ -2085,7 +2081,7 @@ const ExpenseClassifier = () => {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              個別処理モード
+              個別処理
             </button>
             <button
               type="button"
@@ -2096,12 +2092,12 @@ const ExpenseClassifier = () => {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              一括処理モード
+              一括処理
             </button>
           </div>
         </div>
 
-        {/* 個別処理モード */}
+        {/* 個別処理 */}
         {classifyMode === 'single' && currentRecord && (
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <div className="text-center mb-6">
@@ -2311,7 +2307,7 @@ const ExpenseClassifier = () => {
           </div>
         )}
 
-        {/* 一括処理モード */}
+        {/* 一括処理 */}
         {classifyMode === 'batch' && (
           <div className="space-y-4">
           {/* 一括保存ボタン（上部） */}

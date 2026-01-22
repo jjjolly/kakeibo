@@ -33,7 +33,7 @@ const Auth = () => {
             <LogIn className="w-8 h-8 text-indigo-600" />
             <h1 className="text-3xl font-bold text-gray-800">ログイン</h1>
           </div>
-          <p className="text-gray-600">家計簿アプリ - Kakeibo</p>
+          <p className="text-gray-600">おうち決算</p>
         </div>
 
         {error && (
