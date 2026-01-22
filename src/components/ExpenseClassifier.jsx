@@ -24,7 +24,6 @@ const ExpenseClassifier = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [isImporting, setIsImporting] = useState(false);
-  const [cleanupResult, setCleanupResult] = useState(null);
 
   // 分類モード: 'single'（個別処理）または 'batch'（一括処理）
   const [classifyMode, setClassifyMode] = useState('batch');
@@ -219,91 +218,6 @@ const ExpenseClassifier = () => {
       alert('データの取り込みに失敗しました。\nAPI Keyとスプレッドシート設定を確認してください。\n\nエラー: ' + error.message);
     } finally {
       setIsImporting(false);
-    }
-  };
-
-  // データクリーンアップ関数
-  const handleCleanupRecordStatus = async () => {
-    if (!confirm('レコードのステータスをチェックして、不正なデータを修正しますか？')) {
-      return;
-    }
-
-    setIsProcessing(true);
-    setProcessingMessage('レコードをチェック中...');
-    setCleanupResult(null);
-
-    try {
-      const recordsRef = collection(db, 'records');
-      const snapshot = await getDocs(recordsRef);
-
-      let totalCount = 0;
-      let pendingCount = 0;
-      let closedCount = 0;
-      let invalidCount = 0;
-      let fixedCount = 0;
-
-      const invalidRecords = [];
-
-      snapshot.forEach((docSnapshot) => {
-        const record = docSnapshot.data();
-        const recordId = docSnapshot.id;
-        totalCount++;
-
-        if (record.status === 'pending') {
-          pendingCount++;
-        } else if (record.status === 'closed') {
-          closedCount++;
-        } else {
-          invalidCount++;
-          invalidRecords.push({
-            id: recordId,
-            date: record.date,
-            merchant: record.merchant,
-            amount: record.amount,
-            status: record.status || '(なし)',
-            payer: record.payer,
-            category: record.category
-          });
-        }
-      });
-
-      // 結果を保存
-      const result = {
-        totalCount,
-        pendingCount,
-        closedCount,
-        invalidCount,
-        invalidRecords: invalidRecords.slice(0, 10), // 最初の10件のみ表示
-        fixedCount: 0
-      };
-
-      if (invalidRecords.length > 0) {
-        setProcessingMessage(`${invalidRecords.length}件の不正なレコードを修正中...`);
-
-        for (const record of invalidRecords) {
-          const recordRef = doc(db, 'records', record.id);
-          const newStatus = (record.payer && record.category) ? 'closed' : 'pending';
-
-          await updateDoc(recordRef, {
-            status: newStatus
-          });
-
-          fixedCount++;
-        }
-
-        result.fixedCount = fixedCount;
-        setCleanupResult(result);
-        alert(`✅ ${fixedCount}件のレコードを修正しました！`);
-      } else {
-        setCleanupResult(result);
-        alert('✅ すべてのレコードのステータスは正常です。');
-      }
-    } catch (error) {
-      console.error('クリーンアップエラー:', error);
-      alert('クリーンアップに失敗しました: ' + error.message);
-    } finally {
-      setIsProcessing(false);
-      setProcessingMessage('');
     }
   };
 
@@ -1384,14 +1298,6 @@ const ExpenseClassifier = () => {
                 <div className="text-sm">統計</div>
                 <div className="text-xs mt-1">月別集計</div>
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('settings')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600"
-              >
-                <div className="text-sm">設定</div>
-                <div className="text-xs mt-1">管理</div>
-              </button>
             </div>
           </div>
           <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
@@ -1459,14 +1365,6 @@ const ExpenseClassifier = () => {
               >
                 <div className="text-sm">統計</div>
                 <div className="text-xs mt-1">月別集計</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('settings')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
-              >
-                <div className="text-sm">設定</div>
-                <div className="text-xs mt-1">管理</div>
               </button>
             </div>
           </div>
@@ -1734,14 +1632,6 @@ const ExpenseClassifier = () => {
               >
                 <div className="text-sm">統計</div>
                 <div className="text-xs mt-1">月別集計</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('settings')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
-              >
-                <div className="text-sm">設定</div>
-                <div className="text-xs mt-1">管理</div>
               </button>
             </div>
           </div>
@@ -2020,14 +1910,6 @@ const ExpenseClassifier = () => {
               >
                 <div className="text-sm">統計</div>
                 <div className="text-xs mt-1">月別集計</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab('settings')}
-                className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
-              >
-                <div className="text-sm">設定</div>
-                <div className="text-xs mt-1">管理</div>
               </button>
             </div>
           </div>
@@ -2718,73 +2600,6 @@ const ExpenseClassifier = () => {
             );
           })}
         </div>
-        )}
-
-        {/* 設定タブ */}
-        {activeTab === 'settings' && (
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">設定・管理</h2>
-
-            {/* データクリーンアップ */}
-            <div className="mb-8">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">データクリーンアップ</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Firestoreのレコードステータスをチェックし、不正なデータを自動修正します。<br />
-                「履歴に未処理レコードが表示される」などの問題がある場合に実行してください。
-              </p>
-              <button
-                type="button"
-                onClick={handleCleanupRecordStatus}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                🔧 レコードステータスをチェック・修正
-              </button>
-            </div>
-
-            {/* クリーンアップ結果表示 */}
-            {cleanupResult && (
-              <div className="bg-gray-50 rounded-xl p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">チェック結果</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-white rounded-lg p-4">
-                    <div className="text-sm text-gray-600">総レコード数</div>
-                    <div className="text-2xl font-bold text-gray-800">{cleanupResult.totalCount}件</div>
-                  </div>
-                  <div className="bg-white rounded-lg p-4">
-                    <div className="text-sm text-gray-600">未処理</div>
-                    <div className="text-2xl font-bold text-blue-600">{cleanupResult.pendingCount}件</div>
-                  </div>
-                  <div className="bg-white rounded-lg p-4">
-                    <div className="text-sm text-gray-600">処理済み</div>
-                    <div className="text-2xl font-bold text-green-600">{cleanupResult.closedCount}件</div>
-                  </div>
-                  <div className="bg-white rounded-lg p-4">
-                    <div className="text-sm text-gray-600">修正したレコード</div>
-                    <div className="text-2xl font-bold text-orange-600">{cleanupResult.fixedCount}件</div>
-                  </div>
-                </div>
-
-                {cleanupResult.invalidRecords.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">修正されたレコード（最初の10件）:</h4>
-                    <div className="space-y-2">
-                      {cleanupResult.invalidRecords.map((record, index) => (
-                        <div key={index} className="bg-white rounded-lg p-3 text-sm">
-                          <div className="font-semibold text-gray-800">{record.merchant}</div>
-                          <div className="text-gray-600">
-                            日付: {record.date} / 金額: ¥{record.amount?.toLocaleString()}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            元のステータス: {record.status}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
         )}
       </div>
     </div>
