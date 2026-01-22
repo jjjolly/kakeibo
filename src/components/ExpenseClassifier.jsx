@@ -1272,7 +1272,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-indigo-600 text-white"
               >
                 <div className="text-sm">分類</div>
-                <div className="text-xs mt-1">未処理: 0件</div>
+                <div className="text-xs mt-1">{pendingRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1280,7 +1280,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600"
               >
                 <div className="text-sm">精算管理</div>
-                <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
+                <div className="text-xs mt-1">{unsettledRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1607,7 +1607,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
               >
                 <div className="text-sm">分類</div>
-                <div className="text-xs mt-1">未処理: {pendingRecords.length}件</div>
+                <div className="text-xs mt-1">{pendingRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1615,7 +1615,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
               >
                 <div className="text-sm">精算管理</div>
-                <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
+                <div className="text-xs mt-1">{unsettledRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1885,7 +1885,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
               >
                 <div className="text-sm">分類</div>
-                <div className="text-xs mt-1">未処理: {pendingRecords.length}件</div>
+                <div className="text-xs mt-1">{pendingRecords.length}件</div>
               </button>
               <button
                 type="button"
@@ -1893,7 +1893,7 @@ const ExpenseClassifier = () => {
                 className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200"
               >
                 <div className="text-sm">精算管理</div>
-                <div className="text-xs mt-1">未精算: {unsettledRecords.length}件</div>
+                <div className="text-xs mt-1">{unsettledRecords.length}件</div>
               </button>
               <button
                 type="button"
