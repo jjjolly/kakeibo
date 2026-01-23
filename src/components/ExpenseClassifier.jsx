@@ -1009,6 +1009,10 @@ const ExpenseClassifier = () => {
   };
 
   const handleSave = async () => {
+    console.log('🔍 handleSave - needsSettlement:', needsSettlement);
+    console.log('🔍 handleSave - settleWith:', settleWith);
+    console.log('🔍 handleSave - settlementRatioType:', settlementRatioType);
+
     if (!category || !needsSettlement) {
       alert('カテゴリ、精算有無を選択してください');
       return;
@@ -1082,7 +1086,7 @@ const ExpenseClassifier = () => {
 
       // Google Sheetsに書き戻し
       try {
-        await updateRecordToSheet({
+        const sheetData = {
           date: currentRecord.date,
           merchant: currentRecord.merchant,
           amount: currentRecord.amount,
@@ -1097,7 +1101,10 @@ const ExpenseClassifier = () => {
           myAmount: needsSettlement === 'yes' && settlementRatioType === 'amount' ? parseInt(myAmount) : '',
           settlementStatus: needsSettlement === 'yes' ? 'unsettled' : '', // 'unsettled'のまま渡す（googleSheets.jsで'未精算'に変換される）
           processedDate: processedDate // 処理日を追加
-        });
+        };
+        console.log('🔍 updateRecordToSheetに渡すデータ:', sheetData);
+        console.log('🔍 needsSettlement値:', sheetData.needsSettlement);
+        await updateRecordToSheet(sheetData);
         console.log('Google Sheetsへの書き戻し成功');
       } catch (sheetError) {
         console.error('Google Sheets書き戻しエラー:', sheetError);
