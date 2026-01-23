@@ -137,6 +137,8 @@ export const updateRecordToSheet = async (record) => {
       }
     };
 
+    console.log('🔍 Google Sheetsに送信するペイロード:', JSON.stringify(payload, null, 2));
+
     const response = await fetch(SCRIPT_URL, {
       method: 'POST',
       headers: {
