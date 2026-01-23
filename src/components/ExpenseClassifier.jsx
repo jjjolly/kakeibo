@@ -1997,7 +1997,7 @@ const ExpenseClassifier = () => {
       <div className="max-w-2xl mx-auto pt-8">
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-800">家計簿分類</h1>
+            <h1 className="text-3xl font-bold text-gray-800">おうち決算</h1>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg">
                 <User className="w-4 h-4 text-indigo-600" />
@@ -2046,7 +2046,6 @@ const ExpenseClassifier = () => {
               className="flex-1 py-3 px-4 rounded-lg font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 whitespace-nowrap"
             >
               <div className="text-sm">統計</div>
-              <div className="text-xs mt-1">月別集計</div>
             </button>
           </div>
         </div>
@@ -2064,7 +2063,7 @@ const ExpenseClassifier = () => {
             </>
           ) : (
             <>
-              📊 Google Sheetsから取り込む
+              Google Sheetsから取り込む
             </>
           )}
         </button>
