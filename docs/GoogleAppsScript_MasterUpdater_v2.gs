@@ -102,8 +102,8 @@ function updateRecord(record) {
       // 必ず値を設定（空欄の場合も書き込む）
       sheet.getRange(rowNumber, 10).setValue(record.needsSettlement || '');
 
-      // K列以降: 精算要否が'不要'の場合は空欄にする
-      if (record.needsSettlement === '不要' || !record.needsSettlement) {
+      // K列以降: 精算要否が'不要'または空文字列の場合は空欄にする
+      if (record.needsSettlement === '不要' || record.needsSettlement === '') {
         // K列（11列目）: 精算相手 → 空欄
         sheet.getRange(rowNumber, 11).setValue('');
 
