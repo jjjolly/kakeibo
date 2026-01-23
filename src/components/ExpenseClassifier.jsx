@@ -1083,7 +1083,11 @@ const ExpenseClassifier = () => {
       // Google Sheetsに書き戻し
       try {
         await updateRecordToSheet({
-          ...currentRecord,
+          date: currentRecord.date,
+          merchant: currentRecord.merchant,
+          amount: currentRecord.amount,
+          owner: currentRecord.owner,
+          cardType: currentRecord.cardType,
           payer,
           category,
           needsSettlement, // 'yes'/'no'のまま渡す（googleSheets.jsで'必要'/'不要'に変換される）
@@ -1197,7 +1201,11 @@ const ExpenseClassifier = () => {
         // Google Sheetsに書き戻し
         try {
           await updateRecordToSheet({
-            ...record,
+            date: record.date,
+            merchant: record.merchant,
+            amount: record.amount,
+            owner: record.owner,
+            cardType: record.cardType,
             payer,
             category: data.category,
             needsSettlement: data.needsSettlement, // 'yes'/'no'のまま渡す（googleSheets.jsで'必要'/'不要'に変換される）
