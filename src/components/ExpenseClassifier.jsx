@@ -559,6 +559,18 @@ const ExpenseClassifier = () => {
         finalUpdatedData.settlementCompletedDate = '';
       }
 
+      // 精算有→精算不要に変更された場合、精算関連フィールドをクリア
+      if (editingRecord.needsSettlement === 'yes' && updatedData.needsSettlement === 'no') {
+        finalUpdatedData.settleWith = null;
+        finalUpdatedData.settlementRatio = null;
+        finalUpdatedData.settlementRatioType = null;
+        finalUpdatedData.myRatio = null;
+        finalUpdatedData.myAmount = null;
+        finalUpdatedData.settlementAmountValue = null;
+        finalUpdatedData.settlementStatus = null;
+        finalUpdatedData.settlementCompletedDate = '';
+      }
+
       await updateDoc(recordRef, {
         ...finalUpdatedData,
         updatedAt: new Date().toISOString(),
