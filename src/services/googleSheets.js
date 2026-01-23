@@ -95,10 +95,6 @@ export const updateRecordToSheet = async (record) => {
     throw new Error('Google Apps Script URLが設定されていません。.envファイルを確認してください。');
   }
 
-  console.log('🔍 updateRecordToSheet - 受信したrecord:', record);
-  console.log('🔍 record.needsSettlement:', record.needsSettlement);
-  console.log('🔍 typeof record.needsSettlement:', typeof record.needsSettlement);
-
   try {
     // 精算方法の文字列を作成
     let settlementMethod = '';
@@ -141,8 +137,6 @@ export const updateRecordToSheet = async (record) => {
         settlementCompletedDate: record.settlementCompletedDate || '' // O列: 精算完了日
       }
     };
-
-    console.log('🔍 Google Sheetsに送信するペイロード:', JSON.stringify(payload, null, 2));
 
     const response = await fetch(SCRIPT_URL, {
       method: 'POST',

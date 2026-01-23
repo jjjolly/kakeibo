@@ -1009,9 +1009,6 @@ const ExpenseClassifier = () => {
   };
 
   const handleSave = async () => {
-    // ★★★ 最優先デバッグ v2 ★★★
-    alert(`【デバッグv2】needsSettlement="${needsSettlement}"`);
-
     if (!category || !needsSettlement) {
       alert('カテゴリ、精算有無を選択してください');
       return;
