@@ -1009,9 +1009,8 @@ const ExpenseClassifier = () => {
   };
 
   const handleSave = async () => {
-    console.log('🔍 handleSave - needsSettlement:', needsSettlement);
-    console.log('🔍 handleSave - settleWith:', settleWith);
-    console.log('🔍 handleSave - settlementRatioType:', settlementRatioType);
+    // ★★★ 最優先デバッグ ★★★
+    alert(`【デバッグ】needsSettlement = "${needsSettlement}"`);
 
     if (!category || !needsSettlement) {
       alert('カテゴリ、精算有無を選択してください');
@@ -1086,9 +1085,6 @@ const ExpenseClassifier = () => {
 
       // Google Sheetsに書き戻し
       try {
-        // ★デバッグ: alertで値を表示★
-        alert(`needsSettlement = "${needsSettlement}"\ntype = ${typeof needsSettlement}`);
-
         await updateRecordToSheet({
           date: currentRecord.date,
           merchant: currentRecord.merchant,
