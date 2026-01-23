@@ -1086,25 +1086,21 @@ const ExpenseClassifier = () => {
 
       // Google Sheetsに書き戻し
       try {
-        const sheetData = {
+        await updateRecordToSheet({
           date: currentRecord.date,
           merchant: currentRecord.merchant,
           amount: currentRecord.amount,
           owner: currentRecord.owner,
-          cardType: currentRecord.cardType,
-          payer,
-          category,
-          needsSettlement, // 'yes'/'no'のまま渡す（googleSheets.jsで'必要'/'不要'に変換される）
+          payer: payer,
+          category: category,
+          needsSettlement: needsSettlement, // 明示的に変数名を指定
           settleWith: needsSettlement === 'yes' ? settleWith : '',
           settlementRatioType: needsSettlement === 'yes' ? settlementRatioType : '',
           myRatio: needsSettlement === 'yes' && settlementRatioType === 'ratio' ? myRatio : '',
           myAmount: needsSettlement === 'yes' && settlementRatioType === 'amount' ? parseInt(myAmount) : '',
-          settlementStatus: needsSettlement === 'yes' ? 'unsettled' : '', // 'unsettled'のまま渡す（googleSheets.jsで'未精算'に変換される）
-          processedDate: processedDate // 処理日を追加
-        };
-        console.log('🔍 updateRecordToSheetに渡すデータ:', sheetData);
-        console.log('🔍 needsSettlement値:', sheetData.needsSettlement);
-        await updateRecordToSheet(sheetData);
+          settlementStatus: needsSettlement === 'yes' ? 'unsettled' : '',
+          processedDate: processedDate
+        });
         console.log('Google Sheetsへの書き戻し成功');
       } catch (sheetError) {
         console.error('Google Sheets書き戻しエラー:', sheetError);
@@ -1212,16 +1208,15 @@ const ExpenseClassifier = () => {
             merchant: record.merchant,
             amount: record.amount,
             owner: record.owner,
-            cardType: record.cardType,
-            payer,
+            payer: payer,
             category: data.category,
-            needsSettlement: data.needsSettlement, // 'yes'/'no'のまま渡す（googleSheets.jsで'必要'/'不要'に変換される）
+            needsSettlement: data.needsSettlement, // 明示的に変数名を指定
             settleWith: data.needsSettlement === 'yes' ? data.settleWith : '',
             settlementRatioType: data.needsSettlement === 'yes' ? data.settlementRatioType : '',
             myRatio: data.needsSettlement === 'yes' && data.settlementRatioType === 'ratio' ? data.myRatio : '',
             myAmount: data.needsSettlement === 'yes' && data.settlementRatioType === 'amount' ? parseInt(data.myAmount) : '',
-            settlementStatus: data.needsSettlement === 'yes' ? 'unsettled' : '', // 'unsettled'のまま渡す（googleSheets.jsで'未精算'に変換される）
-            processedDate: processedDate // 処理日を追加
+            settlementStatus: data.needsSettlement === 'yes' ? 'unsettled' : '',
+            processedDate: processedDate
           });
         } catch (sheetError) {
           console.error('Google Sheets書き戻しエラー:', sheetError);
