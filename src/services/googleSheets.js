@@ -55,9 +55,10 @@ export const fetchSpreadsheetData = async (userName, range = 'Master!A2:M') => {
         const processStatus = (row[6] || '').toString().trim();
         const isProcessed = processStatus === '処理済み';
 
-        // J列の精算要否を'必要'→'yes'、'不要'→'no'に変換
+        // J列の精算要否を'必要'→'yes'、'不要'→'no'、空欄→null に変換
         const needsSettlementValue = (row[9] || '').toString().trim();
-        const needsSettlement = needsSettlementValue === '必要' ? 'yes' : 'no';
+        const needsSettlement = needsSettlementValue === '必要' ? 'yes' :
+                                needsSettlementValue === '不要' ? 'no' : null;
 
         return {
           date: row[0] || '', // A列: 日付 (YYYY-MM-DD形式)
