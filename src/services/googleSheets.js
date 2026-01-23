@@ -55,22 +55,25 @@ export const fetchSpreadsheetData = async (userName, range = 'Master!A2:M') => {
         const processStatus = (row[6] || '').toString().trim();
         const isProcessed = processStatus === '処理済み';
 
-        // I列の精算有無を'あり'→'yes'、それ以外→'no'に変換
-        const needsSettlementValue = (row[8] || '').toString().trim();
-        const needsSettlement = needsSettlementValue === 'あり' ? 'yes' : 'no';
+        // J列の精算要否を'必要'→'yes'、'不要'→'no'に変換
+        const needsSettlementValue = (row[9] || '').toString().trim();
+        const needsSettlement = needsSettlementValue === '必要' ? 'yes' : 'no';
 
         return {
           date: row[0] || '', // A列: 日付 (YYYY-MM-DD形式)
-          merchant: row[1] || '', // B列: 店名
+          merchant: row[1] || '', // B列: 決算内容
           amount: amount, // C列: 金額
-          cardType: row[3] || 'その他', // D列: 支払方法
-          owner: row[4] || '', // E列: 所有者（Seigo/Hanaka）
+          cardType: row[3] || 'その他', // D列: カード種類
+          owner: row[4] || '', // E列: 利用者（Seigo/Hanaka）
           isProcessed: isProcessed, // G列が「処理済み」かどうか
-          category: row[7] || '', // H列: カテゴリ
-          needsSettlement: needsSettlement, // I列: 精算有無（'yes'/'no'に統一）
-          settleWith: row[9] || '', // J列: 精算相手
-          settlementMethod: row[10] || '', // K列: 精算方法
-          settlementDetail: row[11] || '', // L列: 精算方法詳細
+          processedDate: row[7] || '', // H列: 処理日
+          category: row[8] || '', // I列: カテゴリ
+          needsSettlement: needsSettlement, // J列: 精算要否（'yes'/'no'に統一）
+          settleWith: row[10] || '', // K列: 精算相手
+          settlementMethod: row[11] || '', // L列: 精算方法
+          settlementDetail: row[12] || '', // M列: 精算方法詳細
+          settlementStatus: row[13] || '', // N列: 精算完了有無
+          settlementCompletedDate: row[14] || '', // O列: 精算完了日
         };
       });
 
@@ -108,6 +111,14 @@ export const updateRecordToSheet = async (record) => {
       settlementDetail = `自分:${record.myAmount || 0}円`;
     }
 
+    // 精算要否を'yes'/'no'から'必要'/'不要'に変換
+    const needsSettlementValue = record.needsSettlement === 'yes' ? '必要' :
+                                  record.needsSettlement === 'no' ? '不要' : '';
+
+    // 精算完了有無を'settled'/'unsettled'から'精算済み'/'未精算'に変換
+    const settlementStatusValue = record.settlementStatus === 'settled' ? '精算済み' :
+                                   record.settlementStatus === 'unsettled' ? '未精算' : '';
+
     const payload = {
       action: 'update',
       record: {
@@ -115,14 +126,14 @@ export const updateRecordToSheet = async (record) => {
         merchant: record.merchant,
         amount: record.amount,
         owner: record.owner,
-        category: record.category || '',
-        needsSettlement: record.needsSettlement || '',
-        settleWith: record.settleWith || '',
-        settlementMethod: settlementMethod,
-        settlementDetail: settlementDetail,
-        settlementStatus: record.settlementStatus || '', // L列: 精算ステータス
-        processedDate: record.processedDate || '', // M列: 処理日
-        settlementCompletedDate: record.settlementCompletedDate || '' // N列: 精算完了日
+        processedDate: record.processedDate || '', // H列: 処理日
+        category: record.category || '', // I列: カテゴリ
+        needsSettlement: needsSettlementValue, // J列: 精算要否（'必要'/'不要'）
+        settleWith: record.settleWith || '', // K列: 精算相手
+        settlementMethod: settlementMethod, // L列: 精算方法
+        settlementDetail: settlementDetail, // M列: 精算方法詳細
+        settlementStatus: settlementStatusValue, // N列: 精算完了有無（'精算済み'/'未精算'）
+        settlementCompletedDate: record.settlementCompletedDate || '' // O列: 精算完了日
       }
     };
 
@@ -145,13 +156,15 @@ export const updateRecordToSheet = async (record) => {
 };
 
 /**
- * スプレッドシートのフォーマット例:
+ * スプレッドシートのフォーマット例（MasterSheet構成）:
  *
- * | A列: 日付        | B列: 店名              | C列: 金額  | D列: 支払方法          | E列: 所有者  |
- * |-----------------|----------------------|----------|----------------------|-------------|
- * | 2026-01-15      | スーパーマーケット      | 3580     | クレジットカードA      | Seigo       |
- * | 2026-01-14      | レストランB           | 8500     | QR決済                | Hanaka      |
- * | 2026-01-13      | ガソリンスタンド       | 5200     | クレジットカードB      | Seigo       |
+ * | A列: 日付   | B列: 決算内容        | C列: 金額 | D列: カード種類    | E列: 利用者 | F列: 取り込み日 | G列: 処理状態 | H列: 処理日 | I列: カテゴリ | J列: 精算要否 | K列: 精算相手 | L列: 精算方法 | M列: 精算方法詳細 | N列: 精算完了有無 | O列: 精算完了日 |
+ * |-----------|-------------------|---------|------------------|-----------|------------|-----------|-----------|-----------|-----------|-----------|-----------|--------------|--------------|------------|
+ * | 2026-01-15 | スーパーマーケット | 3580    | クレジットカードA | Seigo     |            |           |           |           | 必要      |           |           |              | 未精算       |            |
+ * | 2026-01-14 | レストランB       | 8500    | QR決済           | Hanaka    |            | 処理済み   | 2026-01-14 | 食費      | 不要      |           |           |              |              |            |
  *
- * 注意: E列の値（Seigo/Hanaka）でログインユーザーのレコードのみがフィルタリングされます
+ * 注意:
+ * - E列の値（Seigo/Hanaka）でログインユーザーのレコードのみがフィルタリングされます
+ * - J列の精算要否: '必要'/'不要' の値を使用
+ * - N列の精算完了有無: '精算済み'/'未精算' の値を使用
  */
