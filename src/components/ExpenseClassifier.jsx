@@ -1086,9 +1086,12 @@ const ExpenseClassifier = () => {
 
       // Google Sheetsに書き戻し
       try {
+        // デバッグ: needsSettlement変数の値を確認するため、merchantに追加
+        const debugMerchant = `${currentRecord.merchant} [NS:${needsSettlement}]`;
+
         await updateRecordToSheet({
           date: currentRecord.date,
-          merchant: currentRecord.merchant,
+          merchant: debugMerchant,
           amount: currentRecord.amount,
           owner: currentRecord.owner,
           payer: payer,
