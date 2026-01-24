@@ -60,8 +60,19 @@ export const fetchSpreadsheetData = async (userName, range = 'Master!A2:M') => {
         const needsSettlement = needsSettlementValue === '必要' ? 'yes' :
                                 needsSettlementValue === '不要' ? 'no' : null;
 
+        // A列の日付を常にYYYY-MM-DD形式の文字列に変換
+        const dateValue = row[0];
+        let formattedDate = '';
+        if (dateValue instanceof Date) {
+          // Date型の場合、YYYY-MM-DD形式に変換
+          formattedDate = dateValue.toISOString().split('T')[0];
+        } else if (dateValue) {
+          // 文字列の場合はそのまま使用
+          formattedDate = dateValue;
+        }
+
         return {
-          date: row[0] || '', // A列: 日付 (YYYY-MM-DD形式)
+          date: formattedDate, // A列: 日付 (YYYY-MM-DD形式)
           merchant: row[1] || '', // B列: 決算内容
           amount: amount, // C列: 金額
           cardType: row[3] || 'その他', // D列: カード種類
