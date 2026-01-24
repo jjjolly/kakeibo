@@ -99,52 +99,35 @@ function updateRecord(record) {
       }
 
       // J列（10列目）: 精算要否（'必要'/'不要'）
-      // 必ず値を設定（空欄の場合も書き込む）
       sheet.getRange(rowNumber, 10).setValue(record.needsSettlement || '');
 
-      // K列以降: 精算要否が'不要'または空文字列の場合は空欄にする
-      if (record.needsSettlement === '不要' || record.needsSettlement === '') {
-        // K列（11列目）: 精算相手 → 空欄
-        sheet.getRange(rowNumber, 11).setValue('');
-
-        // L列（12列目）: 精算方法 → 空欄
-        sheet.getRange(rowNumber, 12).setValue('');
-
-        // M列（13列目）: 精算方法詳細 → 空欄
-        sheet.getRange(rowNumber, 13).setValue('');
-
-        // N列（14列目）: 精算完了有無 → 空欄
-        sheet.getRange(rowNumber, 14).setValue('');
-
-        // O列（15列目）: 精算完了日 → 空欄
-        sheet.getRange(rowNumber, 15).setValue('');
-
-        Logger.log('✓ 精算不要: K列〜O列をクリア');
-      } else {
-        // 精算要否が'必要'の場合は各フィールドを設定
-
+      // K列以降: 精算要否が'必要'の場合のみ設定、それ以外は空欄
+      if (record.needsSettlement === '必要') {
         // K列（11列目）: 精算相手
-        if (record.settleWith) {
-          sheet.getRange(rowNumber, 11).setValue(record.settleWith);
-        }
+        sheet.getRange(rowNumber, 11).setValue(record.settleWith || '');
 
         // L列（12列目）: 精算方法
-        if (record.settlementMethod) {
-          sheet.getRange(rowNumber, 12).setValue(record.settlementMethod);
-        }
+        sheet.getRange(rowNumber, 12).setValue(record.settlementMethod || '');
 
         // M列（13列目）: 精算方法詳細
-        if (record.settlementDetail) {
-          sheet.getRange(rowNumber, 13).setValue(record.settlementDetail);
-        }
+        sheet.getRange(rowNumber, 13).setValue(record.settlementDetail || '');
 
         // N列（14列目）: 精算完了有無（'精算済み'/'未精算'）
-        if (record.settlementStatus) {
-          sheet.getRange(rowNumber, 14).setValue(record.settlementStatus);
-        }
+        sheet.getRange(rowNumber, 14).setValue(record.settlementStatus || '');
 
         // O列（15列目）: 精算完了日
         sheet.getRange(rowNumber, 15).setValue(record.settlementCompletedDate || '');
+
+        Logger.log('✓ 精算必要: K列〜O列を設定');
+      } else {
+        // 精算不要または空欄の場合はK列〜O列をクリア
+        sheet.getRange(rowNumber, 11).setValue('');
+        sheet.getRange(rowNumber, 12).setValue('');
+        sheet.getRange(rowNumber, 13).setValue('');
+        sheet.getRange(rowNumber, 14).setValue('');
+        sheet.getRange(rowNumber, 15).setValue('');
+
+        Logger.log('✓ 精算不要: K列〜O列をクリア');
       }
 
       Logger.log('✓ レコード更新完了: 行番号 ' + rowNumber);
