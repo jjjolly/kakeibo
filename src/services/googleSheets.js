@@ -14,10 +14,10 @@ const SCRIPT_URL = import.meta.env.VITE_GOOGLE_SHEETS_SCRIPT_URL;
 /**
  * スプレッドシートからデータを取得
  * @param {string} userName - ログインユーザー名（E列でフィルタリングに使用）
- * @param {string} range - 取得する範囲（例: 'Master!A2:M'）
+ * @param {string} range - 取得する範囲（例: 'Master!A2:O'）
  * @returns {Promise<Array>} - 変換されたレコードの配列
  */
-export const fetchSpreadsheetData = async (userName, range = 'Master!A2:M') => {
+export const fetchSpreadsheetData = async (userName, range = 'Master!A2:O') => {
   if (!API_KEY || !SPREADSHEET_ID) {
     throw new Error('Google Sheets APIの設定が不足しています。.envファイルを確認してください。');
   }
